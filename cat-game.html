@@ -248,10 +248,13 @@
 
     // ——— Room ———
     const ROOM = { w: 14, d: 12, h: 4.2 };
-    const wallMat = new THREE.MeshStandardMaterial({
+    const wallMatTemplate = new THREE.MeshStandardMaterial({
       color: 0xd9c3a8,
       roughness: 0.9,
       metalness: 0.02,
+      transparent: true,
+      opacity: 1,
+      depthWrite: true,
     });
     const floorMat = new THREE.MeshStandardMaterial({
       color: 0x8b5a3c,
@@ -262,6 +265,24 @@
       color: 0x5c3a24,
       roughness: 0.7,
     });
+
+    // Walls that can fade when they sit between camera and cat
+    const occluders = [];
+    const OCCLUDE_OPACITY = 0.18;
+
+    function makeOccluderMaterial(template) {
+      const mat = template.clone();
+      mat.transparent = true;
+      mat.opacity = 1;
+      mat.depthWrite = true;
+      return mat;
+    }
+
+    function registerOccluder(mesh) {
+      mesh.userData.fade = 1; // 1 = solid, lower = ghosted
+      occluders.push(mesh);
+      return mesh;
+    }
 
     const floor = new THREE.Mesh(
       new THREE.PlaneGeometry(ROOM.w, ROOM.d),
@@ -287,14 +308,14 @@
     function makeWall(width, height, x, z, rotY) {
       const mesh = new THREE.Mesh(
         new THREE.BoxGeometry(width, height, 0.25),
-        wallMat
+        makeOccluderMaterial(wallMatTemplate)
       );
       mesh.position.set(x, height / 2, z);
       mesh.rotation.y = rotY;
       mesh.castShadow = true;
       mesh.receiveShadow = true;
       scene.add(mesh);
-      return mesh;
+      return registerOccluder(mesh);
     }
 
     makeWall(ROOM.w, ROOM.h, 0, -ROOM.d / 2, 0); // back
@@ -309,30 +330,33 @@
 
     const leftFront = new THREE.Mesh(
       new THREE.BoxGeometry(sideW, ROOM.h, 0.25),
-      wallMat
+      makeOccluderMaterial(wallMatTemplate)
     );
     leftFront.position.set(-ROOM.w / 2 + sideW / 2, ROOM.h / 2, frontZ);
     leftFront.castShadow = true;
     leftFront.receiveShadow = true;
     scene.add(leftFront);
+    registerOccluder(leftFront);
 
     const rightFront = new THREE.Mesh(
       new THREE.BoxGeometry(sideW, ROOM.h, 0.25),
-      wallMat
+      makeOccluderMaterial(wallMatTemplate)
     );
     rightFront.position.set(ROOM.w / 2 - sideW / 2, ROOM.h / 2, frontZ);
     rightFront.castShadow = true;
     rightFront.receiveShadow = true;
     scene.add(rightFront);
+    registerOccluder(rightFront);
 
     const lintel = new THREE.Mesh(
       new THREE.BoxGeometry(doorW, ROOM.h - doorH, 0.25),
-      wallMat
+      makeOccluderMaterial(wallMatTemplate)
     );
     lintel.position.set(0, doorH + (ROOM.h - doorH) / 2, frontZ);
     lintel.castShadow = true;
     lintel.receiveShadow = true;
     scene.add(lintel);
+    registerOccluder(lintel);
 
     // Ceiling
     const ceiling = new THREE.Mesh(
@@ -405,12 +429,15 @@
 
     const door = new THREE.Mesh(
       new THREE.BoxGeometry(doorW - 0.08, doorH - 0.05, 0.12),
-      new THREE.MeshStandardMaterial({ color: 0x7a4a2a, roughness: 0.65 })
+      makeOccluderMaterial(
+        new THREE.MeshStandardMaterial({ color: 0x7a4a2a, roughness: 0.65 })
+      )
     );
     door.position.set(doorW / 2, doorH / 2, 0);
     door.castShadow = true;
     door.receiveShadow = true;
     doorPivot.add(door);
+    registerOccluder(door);
 
     const knob = new THREE.Mesh(
       new THREE.SphereGeometry(0.07, 12, 12),
@@ -772,6 +799,43 @@
       camera.lookAt(camLook);
     }
 
+    // Ghost walls/door that sit between the camera and the cat
+    const occludeRay = new THREE.Raycaster();
+    const occludeOrigin = new THREE.Vector3();
+    const occludeTarget = new THREE.Vector3();
+    const occludeDir = new THREE.Vector3();
+
+    function updateOcclusion(dt) {
+      occludeOrigin.copy(camera.position);
+      occludeTarget.set(cat.position.x, cat.position.y + 0.7, cat.position.z);
+      occludeDir.subVectors(occludeTarget, occludeOrigin);
+      const dist = occludeDir.length();
+      if (dist < 0.001) return;
+      occludeDir.multiplyScalar(1 / dist);
+
+      occludeRay.set(occludeOrigin, occludeDir);
+      occludeRay.far = dist;
+      occludeRay.near = 0.05;
+
+      const hits = occludeRay.intersectObjects(occluders, false);
+      const blocking = new Set();
+      for (const hit of hits) {
+        // Only fade surfaces actually between camera and cat
+        if (hit.distance < dist - 0.05) blocking.add(hit.object);
+      }
+
+      for (const mesh of occluders) {
+        const want = blocking.has(mesh) ? OCCLUDE_OPACITY : 1;
+        mesh.userData.fade = THREE.MathUtils.damp(mesh.userData.fade, want, 10, dt);
+        const mat = mesh.material;
+        mat.opacity = mesh.userData.fade;
+        mat.transparent = mat.opacity < 0.999;
+        mat.depthWrite = mat.opacity > 0.85;
+        // Soften shadow casting while ghosted so the silhouette doesn’t dominate
+        mesh.castShadow = mat.opacity > 0.6;
+      }
+    }
+
     // ——— Bounds ———
     const halfW = ROOM.w / 2 - 0.55;
     const halfD = ROOM.d / 2 - 0.55;
@@ -953,6 +1017,7 @@
       }
 
       updateCamera(dt);
+      updateOcclusion(dt);
       renderer.render(scene, camera);
     }
 
