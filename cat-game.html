@@ -108,56 +108,72 @@
 
     body.is-touch #mobile-controls { display: block; }
 
+    /* Whole left side is a move pad; stick floats under your thumb */
     .stick-zone {
       position: absolute;
-      bottom: max(20px, env(safe-area-inset-bottom));
-      left: 20px;
-      width: 120px;
-      height: 120px;
+      left: 0;
+      top: 20%;
+      bottom: 0;
+      width: 55%;
       pointer-events: auto;
+      touch-action: none;
     }
 
     .stick-base {
-      width: 100%;
-      height: 100%;
+      position: absolute;
+      width: 128px;
+      height: 128px;
       border-radius: 50%;
-      background: rgba(26, 20, 16, 0.45);
-      border: 2px solid rgba(243, 230, 212, 0.35);
-      position: relative;
+      background: rgba(26, 20, 16, 0.4);
+      border: 2px solid rgba(243, 230, 212, 0.4);
+      left: 28px;
+      bottom: max(28px, env(safe-area-inset-bottom));
+      opacity: 0.55;
+      transition: opacity 0.15s ease;
+      pointer-events: none;
     }
+
+    .stick-zone.active .stick-base { opacity: 1; }
 
     .stick-knob {
       position: absolute;
-      width: 48px;
-      height: 48px;
+      width: 58px;
+      height: 58px;
       border-radius: 50%;
-      background: rgba(243, 230, 212, 0.55);
+      background: rgba(243, 230, 212, 0.7);
       left: 50%;
       top: 50%;
       transform: translate(-50%, -50%);
-      touch-action: none;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+      pointer-events: none;
     }
 
     #btn-interact {
       position: absolute;
-      bottom: max(36px, calc(env(safe-area-inset-bottom) + 16px));
-      right: 24px;
-      width: 72px;
-      height: 72px;
+      bottom: max(40px, calc(env(safe-area-inset-bottom) + 20px));
+      right: 22px;
+      width: 84px;
+      height: 84px;
       border-radius: 50%;
       border: 2px solid rgba(243, 230, 212, 0.45);
-      background: rgba(196, 92, 38, 0.75);
+      background: rgba(196, 92, 38, 0.8);
       color: var(--cream);
-      font-size: 1.15rem;
+      font-size: 1.2rem;
       font-weight: 700;
       pointer-events: auto;
       cursor: pointer;
       box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
     }
 
     #btn-interact:active {
       transform: scale(0.94);
       background: rgba(196, 92, 38, 0.95);
+    }
+
+    body.is-touch #title p::after {
+      content: " Drag left side to walk · tap E near glowing rings.";
     }
 
     #help {
@@ -525,12 +541,20 @@
     // Cat collision / movement state
     const catState = {
       yaw: 0,
-      speed: 3.2,
+      speed: 3.6,
+      accel: 14,
+      friction: 16,
+      turnSpeed: 10,
+      velX: 0,
+      velZ: 0,
       velY: 0,
       onGround: true,
       bob: 0,
       holdingYarn: false,
     };
+
+    // Camera yaw lags behind the cat so stick directions stay stable mid-drag
+    let camYaw = 0;
 
     // ——— Lighting ———
     const hemi = new THREE.HemisphereLight(0xfff2e0, 0x4a3a2a, 0.55);
@@ -604,7 +628,10 @@
 
     // ——— Input ———
     const keys = Object.create(null);
-    const stick = { x: 0, y: 0, active: false };
+    const stick = { x: 0, y: 0, active: false, pointerId: null, originX: 0, originY: 0 };
+    const isTouchUI =
+      window.matchMedia("(pointer: coarse)").matches || "ontouchstart" in window;
+    if (isTouchUI) document.body.classList.add("is-touch");
 
     window.addEventListener("keydown", (e) => {
       keys[e.code] = true;
@@ -620,33 +647,61 @@
       keys[e.code] = false;
     });
 
-    // Click / tap on canvas to interact when near
+    // Desktop: click canvas to interact. On phones, use the E button only
+    // so walking gestures don't accidentally trigger interactions.
     canvas.addEventListener("pointerdown", (e) => {
+      if (isTouchUI) return;
       if (e.target === canvas && nearest) tryInteract();
     });
 
     document.getElementById("btn-interact").addEventListener("pointerdown", (e) => {
       e.preventDefault();
+      e.stopPropagation();
       tryInteract();
     });
 
-    // Virtual stick
+    // Floating virtual stick — appear under thumb anywhere on left pad
     const stickZone = document.getElementById("stick-zone");
+    const stickBase = stickZone.querySelector(".stick-base");
     const stickKnob = document.getElementById("stick-knob");
-    const STICK_MAX = 42;
+    const STICK_MAX = 52;
+    const STICK_DEAD = 0.12;
 
-    function setStick(clientX, clientY) {
-      const rect = stickZone.getBoundingClientRect();
-      const cx = rect.left + rect.width / 2;
-      const cy = rect.top + rect.height / 2;
-      let dx = clientX - cx;
-      let dy = clientY - cy;
+    function placeStickBase(clientX, clientY) {
+      const size = 128;
+      const x = THREE.MathUtils.clamp(clientX - size / 2, 8, window.innerWidth * 0.55 - size - 8);
+      const y = THREE.MathUtils.clamp(
+        clientY - size / 2,
+        window.innerHeight * 0.2,
+        window.innerHeight - size - 8
+      );
+      stickBase.style.left = `${x}px`;
+      stickBase.style.top = `${y}px`;
+      stickBase.style.bottom = "auto";
+      stick.originX = x + size / 2;
+      stick.originY = y + size / 2;
+    }
+
+    function setStickFromPointer(clientX, clientY) {
+      let dx = clientX - stick.originX;
+      let dy = clientY - stick.originY;
       const len = Math.hypot(dx, dy) || 1;
       const clamped = Math.min(len, STICK_MAX);
       dx = (dx / len) * clamped;
       dy = (dy / len) * clamped;
-      stick.x = dx / STICK_MAX;
-      stick.y = dy / STICK_MAX;
+
+      // Radial falloff + deadzone for steadier slow walks
+      let nx = dx / STICK_MAX;
+      let ny = dy / STICK_MAX;
+      const mag = Math.hypot(nx, ny);
+      if (mag < STICK_DEAD) {
+        stick.x = 0;
+        stick.y = 0;
+      } else {
+        const shaped = Math.pow((mag - STICK_DEAD) / (1 - STICK_DEAD), 1.15);
+        stick.x = (nx / mag) * shaped;
+        stick.y = (ny / mag) * shaped;
+      }
       stickKnob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
     }
 
@@ -654,41 +709,66 @@
       stick.x = 0;
       stick.y = 0;
       stick.active = false;
+      stick.pointerId = null;
+      stickZone.classList.remove("active");
       stickKnob.style.transform = "translate(-50%, -50%)";
+      // Park stick in a comfortable default corner between uses
+      stickBase.style.left = "28px";
+      stickBase.style.top = "auto";
+      stickBase.style.bottom = "max(28px, env(safe-area-inset-bottom))";
     }
 
     stickZone.addEventListener("pointerdown", (e) => {
+      if (stick.active) return;
+      e.preventDefault();
       stick.active = true;
-      stickZone.setPointerCapture(e.pointerId);
-      setStick(e.clientX, e.clientY);
+      stick.pointerId = e.pointerId;
+      stickZone.classList.add("active");
+      placeStickBase(e.clientX, e.clientY);
+      try {
+        stickZone.setPointerCapture(e.pointerId);
+      } catch (_) {}
+      setStickFromPointer(e.clientX, e.clientY);
     });
     stickZone.addEventListener("pointermove", (e) => {
-      if (!stick.active) return;
-      setStick(e.clientX, e.clientY);
+      if (!stick.active || e.pointerId !== stick.pointerId) return;
+      e.preventDefault();
+      setStickFromPointer(e.clientX, e.clientY);
     });
-    stickZone.addEventListener("pointerup", resetStick);
-    stickZone.addEventListener("pointercancel", resetStick);
-
-    // Detect touch devices for mobile UI
-    if (window.matchMedia("(pointer: coarse)").matches || "ontouchstart" in window) {
-      document.body.classList.add("is-touch");
+    function endStick(e) {
+      if (stick.pointerId !== null && e.pointerId !== stick.pointerId) return;
+      resetStick();
     }
+    stickZone.addEventListener("pointerup", endStick);
+    stickZone.addEventListener("pointercancel", endStick);
+    stickZone.addEventListener("lostpointercapture", () => {
+      if (stick.active) resetStick();
+    });
 
-    // ——— Camera follow ———
-    const camOffset = new THREE.Vector3(0, 3.2, 5.5);
+    // ——— Camera follow (position tracks cat; yaw lags for stable stick mapping) ———
+    const camDist = 5.8;
+    const camHeight = 3.6;
     const camLook = new THREE.Vector3();
     const camPos = new THREE.Vector3();
 
+    function shortestAngle(from, to) {
+      let d = ((to - from + Math.PI) % (Math.PI * 2)) - Math.PI;
+      if (d < -Math.PI) d += Math.PI * 2;
+      return d;
+    }
+
     function updateCamera(dt) {
-      const behind = new THREE.Vector3(
-        Math.sin(catState.yaw) * camOffset.z,
-        camOffset.y,
-        Math.cos(catState.yaw) * camOffset.z
+      // Slow yaw follow — keeps left/right stick meaning stable while turning
+      camYaw += shortestAngle(camYaw, catState.yaw) * (1 - Math.exp(-2.2 * dt));
+
+      const desired = new THREE.Vector3(
+        cat.position.x + Math.sin(camYaw) * camDist,
+        cat.position.y + camHeight,
+        cat.position.z + Math.cos(camYaw) * camDist
       );
-      const desired = cat.position.clone().add(behind);
-      camPos.lerp(desired, 1 - Math.pow(0.001, dt));
+      camPos.lerp(desired, 1 - Math.exp(-8 * dt));
       camera.position.copy(camPos);
-      camLook.copy(cat.position).add(new THREE.Vector3(0, 0.7, 0));
+      camLook.set(cat.position.x, cat.position.y + 0.75, cat.position.z);
       camera.lookAt(camLook);
     }
 
@@ -728,7 +808,7 @@
       const dt = Math.min(clock.getDelta(), 0.05);
       markerPulse += dt;
 
-      // Movement input
+      // Movement input (keys + stick), mapped relative to lagged camera yaw
       let ix = 0;
       let iz = 0;
       if (keys["KeyW"] || keys["ArrowUp"]) iz -= 1;
@@ -744,33 +824,47 @@
         iz /= inputLen;
       }
 
-      if (inputLen > 0.05) {
-        // Camera-relative movement on XZ
-        const forward = new THREE.Vector3();
-        camera.getWorldDirection(forward);
-        forward.y = 0;
-        forward.normalize();
-        const right = new THREE.Vector3().crossVectors(forward, new THREE.Vector3(0, 1, 0)).normalize();
+      // Camera-relative axes from lagged camYaw (not live look) → less stick fight
+      const sinY = Math.sin(camYaw);
+      const cosY = Math.cos(camYaw);
+      // Camera sits at cat + (sin, cos); into-scene / stick-up = opposite of that
+      const fwdX = -sinY;
+      const fwdZ = -cosY;
+      const rightX = cosY;
+      const rightZ = -sinY;
+      const dirX = fwdX * -iz + rightX * ix;
+      const dirZ = fwdZ * -iz + rightZ * ix;
 
-        // Stick/keys: iz forward/back relative to camera, ix strafe
-        // Our iz+: screen down / S = move toward camera (backward)
-        const move = new THREE.Vector3()
-          .addScaledVector(forward, -iz)
-          .addScaledVector(right, ix);
+      const wishLen = Math.hypot(dirX, dirZ);
+      let targetVX = 0;
+      let targetVZ = 0;
+      if (wishLen > 0.001 && inputLen > 0.02) {
+        const scale = (inputLen > 1 ? 1 : inputLen) * catState.speed;
+        targetVX = (dirX / wishLen) * scale;
+        targetVZ = (dirZ / wishLen) * scale;
 
-        if (move.lengthSq() > 0.0001) {
-          move.normalize();
-          cat.position.addScaledVector(move, catState.speed * dt);
-          catState.yaw = Math.atan2(move.x, move.z);
-          cat.rotation.y = catState.yaw;
-          catState.bob += dt * 12;
-          const bob = Math.sin(catState.bob) * 0.04;
-          legs[0].position.y = 0.16 + bob;
-          legs[1].position.y = 0.16 - bob;
-          legs[2].position.y = 0.16 - bob;
-          legs[3].position.y = 0.16 + bob;
-          tail.rotation.z = 0.3 + Math.sin(catState.bob * 0.5) * 0.25;
-        }
+        const desiredYaw = Math.atan2(dirX, dirZ);
+        catState.yaw += shortestAngle(catState.yaw, desiredYaw) * (1 - Math.exp(-catState.turnSpeed * dt));
+        cat.rotation.y = catState.yaw;
+      }
+
+      const rate = (wishLen > 0.001 && inputLen > 0.02) ? catState.accel : catState.friction;
+      const t = 1 - Math.exp(-rate * dt);
+      catState.velX += (targetVX - catState.velX) * t;
+      catState.velZ += (targetVZ - catState.velZ) * t;
+
+      cat.position.x += catState.velX * dt;
+      cat.position.z += catState.velZ * dt;
+
+      const speedNow = Math.hypot(catState.velX, catState.velZ);
+      if (speedNow > 0.4) {
+        catState.bob += dt * (8 + speedNow * 1.5);
+        const bob = Math.sin(catState.bob) * 0.04;
+        legs[0].position.y = 0.16 + bob;
+        legs[1].position.y = 0.16 - bob;
+        legs[2].position.y = 0.16 - bob;
+        legs[3].position.y = 0.16 + bob;
+        tail.rotation.z = 0.3 + Math.sin(catState.bob * 0.5) * 0.25;
       } else {
         legs.forEach((l) => (l.position.y = 0.16));
       }
@@ -863,7 +957,8 @@
     }
 
     // Init camera
-    camPos.set(0, 3.2, 5.5);
+    camYaw = 0;
+    camPos.set(0, camHeight, camDist);
     camera.position.copy(camPos);
 
     window.addEventListener("resize", () => {
