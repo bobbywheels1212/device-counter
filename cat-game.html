@@ -173,7 +173,7 @@
     }
 
     body.is-touch #title p::after {
-      content: " Drag left side to walk · tap E near glowing rings.";
+      content: " Drag left to walk, push farther to run · tap E near rings.";
     }
 
     #help {
@@ -196,12 +196,12 @@
 
   <div id="hud">
     <div id="title">
-      <h1>Cat Room</h1>
-      <p>Walk around the room. Approach the door or the yarn ball and interact.</p>
+      <h1>Zoomer</h1>
+      <p>Walk or run around the room. Approach the door or yarn and interact.</p>
     </div>
     <div id="prompt" aria-live="polite"></div>
     <div id="toast" aria-live="polite"></div>
-    <div id="help">WASD / arrows to move · E or click to interact · Space to jump</div>
+    <div id="help">WASD / arrows walk · hold Shift or push stick hard to run · E to interact · Space jump</div>
     <div id="mobile-controls">
       <div class="stick-zone" id="stick-zone">
         <div class="stick-base">
@@ -494,91 +494,288 @@
     yarnMarker.position.y = 0.03;
     scene.add(yarnMarker);
 
-    // ——— Cat (low-poly primitives) ———
+    // ——— Zoomer (charcoal gray shorthair, amber eyes) ———
     const cat = new THREE.Group();
-    cat.position.set(0, 0, 0);
     scene.add(cat);
 
+    // Coat matched to reference photos
     const fur = new THREE.MeshStandardMaterial({
-      color: 0xe8b86d,
-      roughness: 0.85,
+      color: 0x3a3a3e,
+      roughness: 0.72,
+      metalness: 0.04,
     });
     const furDark = new THREE.MeshStandardMaterial({
-      color: 0xc48a45,
+      color: 0x2a2a2e,
+      roughness: 0.75,
+    });
+    const furStripe = new THREE.MeshStandardMaterial({
+      color: 0x232328,
+      roughness: 0.8,
+    });
+    const earInner = new THREE.MeshStandardMaterial({
+      color: 0x6a5a5c,
       roughness: 0.85,
     });
-    const pink = new THREE.MeshStandardMaterial({ color: 0xf0a0a8, roughness: 0.7 });
-    const eyeWhite = new THREE.MeshStandardMaterial({ color: 0xfff8e8 });
-    const eyePupil = new THREE.MeshStandardMaterial({ color: 0x1a1410 });
+    const noseMat = new THREE.MeshStandardMaterial({
+      color: 0x1c1c20,
+      roughness: 0.55,
+    });
+    const eyeAmber = new THREE.MeshStandardMaterial({
+      color: 0xf0c420,
+      emissive: 0xc49210,
+      emissiveIntensity: 0.35,
+      roughness: 0.35,
+    });
+    const eyePupil = new THREE.MeshStandardMaterial({ color: 0x0a0a0a, roughness: 0.4 });
+    const whiskerMat = new THREE.MeshStandardMaterial({
+      color: 0xe8e8e8,
+      roughness: 0.6,
+    });
 
-    function addPart(parent, geo, mat, x, y, z, sx = 1, sy = 1, sz = 1, rx = 0, ry = 0, rz = 0) {
+    function addMesh(parent, geo, mat, x, y, z, sx = 1, sy = 1, sz = 1, rx = 0, ry = 0, rz = 0) {
       const m = new THREE.Mesh(geo, mat);
       m.position.set(x, y, z);
       m.scale.set(sx, sy, sz);
       m.rotation.set(rx, ry, rz);
       m.castShadow = true;
+      m.receiveShadow = true;
       parent.add(m);
       return m;
     }
 
-    // Body
-    addPart(cat, new THREE.BoxGeometry(0.55, 0.38, 0.9), fur, 0, 0.42, 0);
-    // Chest
-    addPart(cat, new THREE.BoxGeometry(0.5, 0.36, 0.35), fur, 0, 0.44, 0.35);
-    // Head
-    const head = addPart(cat, new THREE.BoxGeometry(0.42, 0.38, 0.4), fur, 0, 0.72, 0.58);
-    // Snout
-    addPart(cat, new THREE.BoxGeometry(0.22, 0.14, 0.16), fur, 0, 0.62, 0.78);
-    // Nose
-    addPart(cat, new THREE.BoxGeometry(0.08, 0.05, 0.05), pink, 0, 0.64, 0.87);
-    // Ears
-    addPart(cat, new THREE.ConeGeometry(0.12, 0.22, 4), furDark, -0.14, 0.95, 0.52, 1, 1, 1, 0, 0, -0.15);
-    addPart(cat, new THREE.ConeGeometry(0.12, 0.22, 4), furDark, 0.14, 0.95, 0.52, 1, 1, 1, 0, 0, 0.15);
-    addPart(cat, new THREE.ConeGeometry(0.06, 0.12, 4), pink, -0.14, 0.92, 0.54);
-    addPart(cat, new THREE.ConeGeometry(0.06, 0.12, 4), pink, 0.14, 0.92, 0.54);
-    // Eyes
-    addPart(cat, new THREE.SphereGeometry(0.06, 10, 10), eyeWhite, -0.1, 0.76, 0.76);
-    addPart(cat, new THREE.SphereGeometry(0.06, 10, 10), eyeWhite, 0.1, 0.76, 0.76);
-    addPart(cat, new THREE.SphereGeometry(0.035, 8, 8), eyePupil, -0.1, 0.76, 0.81);
-    addPart(cat, new THREE.SphereGeometry(0.035, 8, 8), eyePupil, 0.1, 0.76, 0.81);
-    // Legs
-    const legGeo = new THREE.BoxGeometry(0.12, 0.32, 0.12);
-    const legs = [
-      addPart(cat, legGeo, furDark, -0.18, 0.16, 0.28),
-      addPart(cat, legGeo, furDark, 0.18, 0.16, 0.28),
-      addPart(cat, legGeo, furDark, -0.18, 0.16, -0.28),
-      addPart(cat, legGeo, furDark, 0.18, 0.16, -0.28),
-    ];
-    // Tail
-    const tail = addPart(
-      cat,
-      new THREE.CylinderGeometry(0.05, 0.07, 0.7, 8),
-      furDark,
-      0,
-      0.55,
-      -0.55,
-      1,
-      1,
-      1,
-      0.9,
-      0,
-      0.3
-    );
+    // Articulated torso (spine flex while running)
+    const torso = new THREE.Group();
+    torso.position.y = 0.38;
+    cat.add(torso);
 
-    // Cat collision / movement state
+    addMesh(torso, new THREE.BoxGeometry(0.42, 0.34, 0.72), fur, 0, 0.02, -0.02);
+    addMesh(torso, new THREE.BoxGeometry(0.4, 0.32, 0.36), fur, 0, 0.04, 0.34); // chest
+    addMesh(torso, new THREE.BoxGeometry(0.36, 0.28, 0.28), furDark, 0, 0.0, -0.38); // haunches
+
+    // Head
+    const head = new THREE.Group();
+    head.position.set(0, 0.22, 0.58);
+    torso.add(head);
+
+    addMesh(head, new THREE.BoxGeometry(0.36, 0.32, 0.34), fur, 0, 0.02, 0);
+    addMesh(head, new THREE.BoxGeometry(0.2, 0.14, 0.16), fur, 0, -0.04, 0.2); // muzzle
+    addMesh(head, new THREE.BoxGeometry(0.07, 0.045, 0.05), noseMat, 0, -0.02, 0.29);
+
+    // Pointed ears
+    addMesh(head, new THREE.ConeGeometry(0.1, 0.2, 4), fur, -0.12, 0.24, -0.02, 1, 1, 0.85, 0, 0, -0.2);
+    addMesh(head, new THREE.ConeGeometry(0.1, 0.2, 4), fur, 0.12, 0.24, -0.02, 1, 1, 0.85, 0, 0, 0.2);
+    addMesh(head, new THREE.ConeGeometry(0.05, 0.11, 4), earInner, -0.12, 0.22, 0.0);
+    addMesh(head, new THREE.ConeGeometry(0.05, 0.11, 4), earInner, 0.12, 0.22, 0.0);
+
+    // Amber eyes + vertical pupils
+    function makeEye(x) {
+      const eye = new THREE.Group();
+      eye.position.set(x, 0.06, 0.16);
+      head.add(eye);
+      addMesh(eye, new THREE.SphereGeometry(0.055, 12, 12), eyeAmber, 0, 0, 0);
+      const pupil = addMesh(
+        eye,
+        new THREE.CapsuleGeometry(0.012, 0.04, 4, 8),
+        eyePupil,
+        0,
+        0,
+        0.045
+      );
+      pupil.rotation.z = Math.PI / 2;
+      return eye;
+    }
+    makeEye(-0.09);
+    makeEye(0.09);
+
+    // White whiskers
+    function addWhisker(side, y, zAng) {
+      const w = addMesh(
+        head,
+        new THREE.CylinderGeometry(0.004, 0.004, 0.28, 4),
+        whiskerMat,
+        side * 0.12,
+        y,
+        0.22,
+        1,
+        1,
+        1,
+        0,
+        0,
+        side * (Math.PI / 2 - 0.15) + zAng
+      );
+      w.castShadow = false;
+    }
+    addWhisker(-1, -0.02, -0.2);
+    addWhisker(-1, -0.05, 0.05);
+    addWhisker(-1, -0.08, 0.25);
+    addWhisker(1, -0.02, 0.2);
+    addWhisker(1, -0.05, -0.05);
+    addWhisker(1, -0.08, -0.25);
+
+    // Legs as hinged pivots (shoulder/hip) for walk & run cycles
+    function makeLeg(x, z, isFront) {
+      const pivot = new THREE.Group();
+      pivot.position.set(x, isFront ? 0.02 : -0.02, z);
+      torso.add(pivot);
+      const upper = addMesh(
+        pivot,
+        new THREE.BoxGeometry(0.1, 0.22, 0.12),
+        fur,
+        0,
+        -0.12,
+        0
+      );
+      const lower = addMesh(
+        pivot,
+        new THREE.BoxGeometry(0.09, 0.2, 0.1),
+        furDark,
+        0,
+        -0.3,
+        0.01
+      );
+      const paw = addMesh(
+        pivot,
+        new THREE.BoxGeometry(0.11, 0.06, 0.14),
+        furDark,
+        0,
+        -0.42,
+        0.02
+      );
+      return { pivot, upper, lower, paw, isFront, homeX: x, homeZ: z };
+    }
+
+    const legs = [
+      makeLeg(-0.14, 0.28, true),  // FL
+      makeLeg(0.14, 0.28, true),   // FR
+      makeLeg(-0.14, -0.3, false), // BL
+      makeLeg(0.14, -0.3, false),  // BR
+    ];
+
+    // Segmented tail with faint darker “ghost” rings
+    const tailRoot = new THREE.Group();
+    tailRoot.position.set(0, 0.08, -0.52);
+    torso.add(tailRoot);
+    const tailSegs = [];
+    let tailParent = tailRoot;
+    for (let i = 0; i < 5; i++) {
+      const seg = new THREE.Group();
+      seg.position.set(0, 0, i === 0 ? 0 : -0.14);
+      tailParent.add(seg);
+      const mat = i % 2 === 1 ? furStripe : furDark;
+      const r0 = 0.07 - i * 0.008;
+      const r1 = 0.06 - i * 0.008;
+      addMesh(seg, new THREE.CylinderGeometry(r1, r0, 0.15, 8), mat, 0, 0, -0.07, 1, 1, 1, Math.PI / 2, 0, 0);
+      tailSegs.push(seg);
+      tailParent = seg;
+    }
+    // Resting curl a bit upward/to the side like the photo
+    tailRoot.rotation.x = 0.4;
+    tailRoot.rotation.z = 0.15;
+
+    // Cat movement + animation state
     const catState = {
       yaw: 0,
-      speed: 3.6,
-      accel: 14,
-      friction: 16,
-      turnSpeed: 10,
+      walkSpeed: 3.2,
+      runSpeed: 6.4,
+      speed: 3.2,
+      accel: 16,
+      friction: 18,
+      turnSpeed: 11,
       velX: 0,
       velZ: 0,
       velY: 0,
       onGround: true,
-      bob: 0,
+      animTime: 0,
+      gait: "idle", // idle | walk | run
       holdingYarn: false,
     };
+
+    function updateCatAnimation(dt, speedNow, moving) {
+      const runThreshold = catState.walkSpeed * 0.72;
+      let gait = "idle";
+      if (moving && speedNow > 0.25) {
+        gait = speedNow > runThreshold ? "run" : "walk";
+      }
+      catState.gait = gait;
+
+      if (gait === "idle") {
+        // Ease limbs back to rest + soft idle breathing / tail sway
+        catState.animTime += dt;
+        for (const leg of legs) {
+          leg.pivot.rotation.x = THREE.MathUtils.damp(leg.pivot.rotation.x, 0, 8, dt);
+          leg.pivot.rotation.z = THREE.MathUtils.damp(leg.pivot.rotation.z, 0, 8, dt);
+          leg.lower.rotation.x = THREE.MathUtils.damp(leg.lower.rotation.x, 0, 8, dt);
+        }
+        torso.position.y = THREE.MathUtils.damp(torso.position.y, 0.38, 8, dt);
+        torso.rotation.x = THREE.MathUtils.damp(torso.rotation.x, 0, 8, dt);
+        head.rotation.x = THREE.MathUtils.damp(head.rotation.x, 0, 8, dt);
+        const sway = Math.sin(catState.animTime * 1.6) * 0.12;
+        tailRoot.rotation.z = THREE.MathUtils.damp(tailRoot.rotation.z, 0.15 + sway, 4, dt);
+        tailRoot.rotation.x = THREE.MathUtils.damp(tailRoot.rotation.x, 0.4, 4, dt);
+        for (let i = 0; i < tailSegs.length; i++) {
+          tailSegs[i].rotation.y = THREE.MathUtils.damp(
+            tailSegs[i].rotation.y,
+            Math.sin(catState.animTime * 1.6 - i * 0.4) * 0.08,
+            4,
+            dt
+          );
+          tailSegs[i].rotation.x = THREE.MathUtils.damp(tailSegs[i].rotation.x, 0.05, 4, dt);
+        }
+        return;
+      }
+
+      const isRun = gait === "run";
+      // Phase advances with distance so feet don’t moonwalk
+      const cadence = isRun ? 14 : 9;
+      catState.animTime += dt * cadence * (0.55 + speedNow / catState.runSpeed);
+
+      const t = catState.animTime;
+      if (isRun) {
+        // Rotary gallop / bound: fronts together-ish, rears opposite, spine flex
+        const swing = Math.sin(t) * 0.7;
+        const rear = Math.sin(t + Math.PI) * 0.75;
+        legs[0].pivot.rotation.x = swing;
+        legs[1].pivot.rotation.x = swing * 0.92;
+        legs[2].pivot.rotation.x = rear;
+        legs[3].pivot.rotation.x = rear * 0.92;
+        legs[0].lower.rotation.x = Math.max(0, -Math.sin(t)) * 0.5;
+        legs[1].lower.rotation.x = Math.max(0, -Math.sin(t)) * 0.5;
+        legs[2].lower.rotation.x = Math.max(0, -Math.sin(t + Math.PI)) * 0.55;
+        legs[3].lower.rotation.x = Math.max(0, -Math.sin(t + Math.PI)) * 0.55;
+
+        torso.position.y = 0.38 + Math.abs(Math.sin(t)) * 0.07;
+        torso.rotation.x = Math.sin(t) * 0.12;
+        head.rotation.x = -Math.sin(t) * 0.08;
+        tailRoot.rotation.x = 0.55 + Math.sin(t) * 0.25;
+        tailRoot.rotation.z = 0.05;
+        for (let i = 0; i < tailSegs.length; i++) {
+          tailSegs[i].rotation.x = Math.sin(t - i * 0.35) * 0.2;
+          tailSegs[i].rotation.y = 0;
+        }
+      } else {
+        // Walk: classic diagonal gait
+        const a = Math.sin(t) * 0.45;
+        const b = Math.sin(t + Math.PI) * 0.45;
+        legs[0].pivot.rotation.x = a; // FL
+        legs[3].pivot.rotation.x = a; // BR
+        legs[1].pivot.rotation.x = b; // FR
+        legs[2].pivot.rotation.x = b; // BL
+        legs[0].lower.rotation.x = Math.max(0, -Math.sin(t)) * 0.35;
+        legs[3].lower.rotation.x = Math.max(0, -Math.sin(t)) * 0.35;
+        legs[1].lower.rotation.x = Math.max(0, -Math.sin(t + Math.PI)) * 0.35;
+        legs[2].lower.rotation.x = Math.max(0, -Math.sin(t + Math.PI)) * 0.35;
+
+        torso.position.y = 0.38 + Math.abs(Math.sin(t * 2)) * 0.025;
+        torso.rotation.x = Math.sin(t * 2) * 0.03;
+        head.rotation.x = -Math.sin(t * 2) * 0.04;
+        tailRoot.rotation.x = 0.35 + Math.sin(t) * 0.1;
+        tailRoot.rotation.z = 0.12 + Math.sin(t * 0.5) * 0.15;
+        for (let i = 0; i < tailSegs.length; i++) {
+          tailSegs[i].rotation.y = Math.sin(t * 0.5 - i * 0.35) * 0.12;
+          tailSegs[i].rotation.x = 0.04;
+        }
+      }
+    }
 
     // Camera yaw lags behind the cat so stick directions stay stable mid-drag
     let camYaw = 0;
@@ -902,8 +1099,13 @@
       const wishLen = Math.hypot(dirX, dirZ);
       let targetVX = 0;
       let targetVZ = 0;
-      if (wishLen > 0.001 && inputLen > 0.02) {
-        const scale = (inputLen > 1 ? 1 : inputLen) * catState.speed;
+      const moving = wishLen > 0.001 && inputLen > 0.02;
+      // Stick past ~65% (or Shift) → Zoomer runs
+      const wantRun = moving && (inputLen > 0.65 || keys["ShiftLeft"] || keys["ShiftRight"]);
+      catState.speed = wantRun ? catState.runSpeed : catState.walkSpeed;
+
+      if (moving) {
+        const scale = Math.min(inputLen, 1) * catState.speed;
         targetVX = (dirX / wishLen) * scale;
         targetVZ = (dirZ / wishLen) * scale;
 
@@ -912,26 +1114,16 @@
         cat.rotation.y = catState.yaw;
       }
 
-      const rate = (wishLen > 0.001 && inputLen > 0.02) ? catState.accel : catState.friction;
-      const t = 1 - Math.exp(-rate * dt);
-      catState.velX += (targetVX - catState.velX) * t;
-      catState.velZ += (targetVZ - catState.velZ) * t;
+      const rate = moving ? catState.accel : catState.friction;
+      const blend = 1 - Math.exp(-rate * dt);
+      catState.velX += (targetVX - catState.velX) * blend;
+      catState.velZ += (targetVZ - catState.velZ) * blend;
 
       cat.position.x += catState.velX * dt;
       cat.position.z += catState.velZ * dt;
 
       const speedNow = Math.hypot(catState.velX, catState.velZ);
-      if (speedNow > 0.4) {
-        catState.bob += dt * (8 + speedNow * 1.5);
-        const bob = Math.sin(catState.bob) * 0.04;
-        legs[0].position.y = 0.16 + bob;
-        legs[1].position.y = 0.16 - bob;
-        legs[2].position.y = 0.16 - bob;
-        legs[3].position.y = 0.16 + bob;
-        tail.rotation.z = 0.3 + Math.sin(catState.bob * 0.5) * 0.25;
-      } else {
-        legs.forEach((l) => (l.position.y = 0.16));
-      }
+      updateCatAnimation(dt, speedNow, moving || speedNow > 0.2);
 
       // Jump
       if ((keys["Space"] || keys["KeyJ"]) && catState.onGround) {
