@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#2a1f18" />
+  <title>Cat Room — Prototype</title>
+  <style>
+    :root {
+      --ink: #1a1410;
+      --cream: #f3e6d4;
+      --accent: #c45c26;
+      --panel: rgba(26, 20, 16, 0.72);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #1a1410;
+      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+      color: var(--cream);
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    #game {
+      position: fixed;
+      inset: 0;
+      display: block;
+    }
+
+    #hud {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    #title {
+      position: absolute;
+      top: max(12px, env(safe-area-inset-top));
+      left: 16px;
+      right: 16px;
+    }
+
+    #title h1 {
+      font-size: clamp(1.1rem, 3vw, 1.6rem);
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-shadow: 0 2px 12px rgba(0, 0, 0, 0.55);
+    }
+
+    #title p {
+      margin-top: 4px;
+      font-size: 0.85rem;
+      opacity: 0.85;
+      max-width: 36ch;
+      text-shadow: 0 1px 8px rgba(0, 0, 0, 0.5);
+    }
+
+    #prompt {
+      position: absolute;
+      bottom: max(120px, calc(env(safe-area-inset-bottom) + 110px));
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--panel);
+      border: 1px solid rgba(243, 230, 212, 0.25);
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+      white-space: nowrap;
+      backdrop-filter: blur(8px);
+    }
+
+    #prompt.visible { opacity: 1; }
+
+    #toast {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: var(--panel);
+      border: 1px solid rgba(243, 230, 212, 0.3);
+      padding: 14px 22px;
+      border-radius: 10px;
+      font-size: 1.05rem;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+      text-align: center;
+      backdrop-filter: blur(8px);
+    }
+
+    #toast.visible { opacity: 1; }
+
+    #mobile-controls {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      display: none;
+    }
+
+    body.is-touch #mobile-controls { display: block; }
+
+    .stick-zone {
+      position: absolute;
+      bottom: max(20px, env(safe-area-inset-bottom));
+      left: 20px;
+      width: 120px;
+      height: 120px;
+      pointer-events: auto;
+    }
+
+    .stick-base {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background: rgba(26, 20, 16, 0.45);
+      border: 2px solid rgba(243, 230, 212, 0.35);
+      position: relative;
+    }
+
+    .stick-knob {
+      position: absolute;
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: rgba(243, 230, 212, 0.55);
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      touch-action: none;
+    }
+
+    #btn-interact {
+      position: absolute;
+      bottom: max(36px, calc(env(safe-area-inset-bottom) + 16px));
+      right: 24px;
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      border: 2px solid rgba(243, 230, 212, 0.45);
+      background: rgba(196, 92, 38, 0.75);
+      color: var(--cream);
+      font-size: 1.15rem;
+      font-weight: 700;
+      pointer-events: auto;
+      cursor: pointer;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+    }
+
+    #btn-interact:active {
+      transform: scale(0.94);
+      background: rgba(196, 92, 38, 0.95);
+    }
+
+    #help {
+      position: absolute;
+      bottom: max(12px, env(safe-area-inset-bottom));
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 0.75rem;
+      opacity: 0.7;
+      text-align: center;
+      text-shadow: 0 1px 6px rgba(0, 0, 0, 0.6);
+      padding: 0 12px;
+    }
+
+    body.is-touch #help { display: none; }
+  </style>
+</head>
+<body>
+  <canvas id="game"></canvas>
+
+  <div id="hud">
+    <div id="title">
+      <h1>Cat Room</h1>
+      <p>Walk around the room. Approach the door or the yarn ball and interact.</p>
+    </div>
+    <div id="prompt" aria-live="polite"></div>
+    <div id="toast" aria-live="polite"></div>
+    <div id="help">WASD / arrows to move · E or click to interact · Space to jump</div>
+    <div id="mobile-controls">
+      <div class="stick-zone" id="stick-zone">
+        <div class="stick-base">
+          <div class="stick-knob" id="stick-knob"></div>
+        </div>
+      </div>
+      <button type="button" id="btn-interact" aria-label="Interact">E</button>
+    </div>
+  </div>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js"
+    }
+  }
+  </script>
+
+  <script type="module">
+    import * as THREE from "three";
+
+    // ——— Setup ———
+    const canvas = document.getElementById("game");
+    const promptEl = document.getElementById("prompt");
+    const toastEl = document.getElementById("toast");
+
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x87a0b8);
+    scene.fog = new THREE.Fog(0x87a0b8, 18, 42);
+
+    const camera = new THREE.PerspectiveCamera(
+      55,
+      window.innerWidth / window.innerHeight,
+      0.1,
+      100
+    );
+
+    // ——— Room ———
+    const ROOM = { w: 14, d: 12, h: 4.2 };
+    const wallMat = new THREE.MeshStandardMaterial({
+      color: 0xd9c3a8,
+      roughness: 0.9,
+      metalness: 0.02,
+    });
+    const floorMat = new THREE.MeshStandardMaterial({
+      color: 0x8b5a3c,
+      roughness: 0.85,
+      metalness: 0.05,
+    });
+    const trimMat = new THREE.MeshStandardMaterial({
+      color: 0x5c3a24,
+      roughness: 0.7,
+    });
+
+    const floor = new THREE.Mesh(
+      new THREE.PlaneGeometry(ROOM.w, ROOM.d),
+      floorMat
+    );
+    floor.rotation.x = -Math.PI / 2;
+    floor.receiveShadow = true;
+    scene.add(floor);
+
+    // Floor planks (subtle stripes)
+    const plankGeo = new THREE.PlaneGeometry(ROOM.w * 0.98, 0.04);
+    const plankMat = new THREE.MeshStandardMaterial({
+      color: 0x6e452c,
+      roughness: 1,
+    });
+    for (let i = -5; i <= 5; i++) {
+      const plank = new THREE.Mesh(plankGeo, plankMat);
+      plank.rotation.x = -Math.PI / 2;
+      plank.position.set(0, 0.005, i * 1.05);
+      scene.add(plank);
+    }
+
+    function makeWall(width, height, x, z, rotY) {
+      const mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(width, height, 0.25),
+        wallMat
+      );
+      mesh.position.set(x, height / 2, z);
+      mesh.rotation.y = rotY;
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      scene.add(mesh);
+      return mesh;
+    }
+
+    makeWall(ROOM.w, ROOM.h, 0, -ROOM.d / 2, 0); // back
+    makeWall(ROOM.d, ROOM.h, -ROOM.w / 2, 0, Math.PI / 2); // left
+    makeWall(ROOM.d, ROOM.h, ROOM.w / 2, 0, Math.PI / 2); // right
+
+    // Front wall with door gap: two side panels + lintel
+    const doorW = 2.2;
+    const doorH = 3.1;
+    const sideW = (ROOM.w - doorW) / 2;
+    const frontZ = ROOM.d / 2;
+
+    const leftFront = new THREE.Mesh(
+      new THREE.BoxGeometry(sideW, ROOM.h, 0.25),
+      wallMat
+    );
+    leftFront.position.set(-ROOM.w / 2 + sideW / 2, ROOM.h / 2, frontZ);
+    leftFront.castShadow = true;
+    leftFront.receiveShadow = true;
+    scene.add(leftFront);
+
+    const rightFront = new THREE.Mesh(
+      new THREE.BoxGeometry(sideW, ROOM.h, 0.25),
+      wallMat
+    );
+    rightFront.position.set(ROOM.w / 2 - sideW / 2, ROOM.h / 2, frontZ);
+    rightFront.castShadow = true;
+    rightFront.receiveShadow = true;
+    scene.add(rightFront);
+
+    const lintel = new THREE.Mesh(
+      new THREE.BoxGeometry(doorW, ROOM.h - doorH, 0.25),
+      wallMat
+    );
+    lintel.position.set(0, doorH + (ROOM.h - doorH) / 2, frontZ);
+    lintel.castShadow = true;
+    lintel.receiveShadow = true;
+    scene.add(lintel);
+
+    // Ceiling
+    const ceiling = new THREE.Mesh(
+      new THREE.PlaneGeometry(ROOM.w, ROOM.d),
+      new THREE.MeshStandardMaterial({ color: 0xf0e6d8, roughness: 0.95 })
+    );
+    ceiling.rotation.x = Math.PI / 2;
+    ceiling.position.y = ROOM.h;
+    scene.add(ceiling);
+
+    // Baseboards
+    function baseboard(len, x, z, rotY) {
+      const b = new THREE.Mesh(
+        new THREE.BoxGeometry(len, 0.18, 0.08),
+        trimMat
+      );
+      b.position.set(x, 0.09, z);
+      b.rotation.y = rotY;
+      scene.add(b);
+    }
+    baseboard(ROOM.w, 0, -ROOM.d / 2 + 0.16, 0);
+    baseboard(ROOM.d, -ROOM.w / 2 + 0.16, 0, Math.PI / 2);
+    baseboard(ROOM.d, ROOM.w / 2 - 0.16, 0, Math.PI / 2);
+
+    // Rug
+    const rug = new THREE.Mesh(
+      new THREE.PlaneGeometry(4.5, 3.2),
+      new THREE.MeshStandardMaterial({ color: 0x3d5c4a, roughness: 0.95 })
+    );
+    rug.rotation.x = -Math.PI / 2;
+    rug.position.set(-2.5, 0.02, -1.5);
+    rug.receiveShadow = true;
+    scene.add(rug);
+
+    // Simple furniture: couch + table
+    function box(w, h, d, color, x, y, z) {
+      const m = new THREE.Mesh(
+        new THREE.BoxGeometry(w, h, d),
+        new THREE.MeshStandardMaterial({ color, roughness: 0.8 })
+      );
+      m.position.set(x, y, z);
+      m.castShadow = true;
+      m.receiveShadow = true;
+      scene.add(m);
+      return m;
+    }
+    box(3.2, 0.7, 1.2, 0x4a6741, -3.5, 0.35, -4.2); // couch seat
+    box(3.2, 0.9, 0.25, 0x3e5636, -3.5, 1.05, -4.7); // couch back
+    box(1.2, 0.45, 0.8, 0x6b4423, 2.8, 0.225, -3.5); // table
+
+    // Window on back wall
+    const windowFrame = box(2.4, 1.8, 0.12, 0x5c3a24, 0, 2.4, -ROOM.d / 2 + 0.08);
+    const windowGlass = new THREE.Mesh(
+      new THREE.PlaneGeometry(2.0, 1.4),
+      new THREE.MeshStandardMaterial({
+        color: 0xa8d4ef,
+        emissive: 0x6ea8c8,
+        emissiveIntensity: 0.35,
+        transparent: true,
+        opacity: 0.85,
+      })
+    );
+    windowGlass.position.set(0, 2.4, -ROOM.d / 2 + 0.16);
+    scene.add(windowGlass);
+
+    // ——— Interactive door ———
+    const doorPivot = new THREE.Group();
+    doorPivot.position.set(-doorW / 2, 0, frontZ);
+    scene.add(doorPivot);
+
+    const door = new THREE.Mesh(
+      new THREE.BoxGeometry(doorW - 0.08, doorH - 0.05, 0.12),
+      new THREE.MeshStandardMaterial({ color: 0x7a4a2a, roughness: 0.65 })
+    );
+    door.position.set(doorW / 2, doorH / 2, 0);
+    door.castShadow = true;
+    door.receiveShadow = true;
+    doorPivot.add(door);
+
+    const knob = new THREE.Mesh(
+      new THREE.SphereGeometry(0.07, 12, 12),
+      new THREE.MeshStandardMaterial({ color: 0xd4af37, metalness: 0.7, roughness: 0.3 })
+    );
+    knob.position.set(doorW - 0.25, doorH / 2, 0.1);
+    doorPivot.add(knob);
+
+    // ——— Interactive yarn ball ———
+    const yarnGroup = new THREE.Group();
+    yarnGroup.position.set(3.2, 0.22, 1.5);
+    scene.add(yarnGroup);
+
+    const yarn = new THREE.Mesh(
+      new THREE.SphereGeometry(0.22, 16, 16),
+      new THREE.MeshStandardMaterial({ color: 0xc45c26, roughness: 0.9 })
+    );
+    yarn.castShadow = true;
+    yarnGroup.add(yarn);
+
+    // Yarn swirl lines
+    const swirlMat = new THREE.MeshStandardMaterial({ color: 0x9a3d14 });
+    for (let i = 0; i < 3; i++) {
+      const ring = new THREE.Mesh(
+        new THREE.TorusGeometry(0.16 - i * 0.03, 0.018, 8, 24),
+        swirlMat
+      );
+      ring.rotation.x = Math.PI / 2 + i * 0.4;
+      ring.rotation.y = i * 0.7;
+      yarnGroup.add(ring);
+    }
+
+    // Interaction marker rings on floor
+    function makeMarker(color) {
+      const ring = new THREE.Mesh(
+        new THREE.RingGeometry(0.45, 0.55, 32),
+        new THREE.MeshBasicMaterial({
+          color,
+          transparent: true,
+          opacity: 0.55,
+          side: THREE.DoubleSide,
+        })
+      );
+      ring.rotation.x = -Math.PI / 2;
+      ring.position.y = 0.03;
+      return ring;
+    }
+    const doorMarker = makeMarker(0xf0c674);
+    doorMarker.position.set(0, 0.03, frontZ - 1.1);
+    scene.add(doorMarker);
+
+    const yarnMarker = makeMarker(0xc45c26);
+    yarnMarker.position.copy(yarnGroup.position);
+    yarnMarker.position.y = 0.03;
+    scene.add(yarnMarker);
+
+    // ——— Cat (low-poly primitives) ———
+    const cat = new THREE.Group();
+    cat.position.set(0, 0, 0);
+    scene.add(cat);
+
+    const fur = new THREE.MeshStandardMaterial({
+      color: 0xe8b86d,
+      roughness: 0.85,
+    });
+    const furDark = new THREE.MeshStandardMaterial({
+      color: 0xc48a45,
+      roughness: 0.85,
+    });
+    const pink = new THREE.MeshStandardMaterial({ color: 0xf0a0a8, roughness: 0.7 });
+    const eyeWhite = new THREE.MeshStandardMaterial({ color: 0xfff8e8 });
+    const eyePupil = new THREE.MeshStandardMaterial({ color: 0x1a1410 });
+
+    function addPart(parent, geo, mat, x, y, z, sx = 1, sy = 1, sz = 1, rx = 0, ry = 0, rz = 0) {
+      const m = new THREE.Mesh(geo, mat);
+      m.position.set(x, y, z);
+      m.scale.set(sx, sy, sz);
+      m.rotation.set(rx, ry, rz);
+      m.castShadow = true;
+      parent.add(m);
+      return m;
+    }
+
+    // Body
+    addPart(cat, new THREE.BoxGeometry(0.55, 0.38, 0.9), fur, 0, 0.42, 0);
+    // Chest
+    addPart(cat, new THREE.BoxGeometry(0.5, 0.36, 0.35), fur, 0, 0.44, 0.35);
+    // Head
+    const head = addPart(cat, new THREE.BoxGeometry(0.42, 0.38, 0.4), fur, 0, 0.72, 0.58);
+    // Snout
+    addPart(cat, new THREE.BoxGeometry(0.22, 0.14, 0.16), fur, 0, 0.62, 0.78);
+    // Nose
+    addPart(cat, new THREE.BoxGeometry(0.08, 0.05, 0.05), pink, 0, 0.64, 0.87);
+    // Ears
+    addPart(cat, new THREE.ConeGeometry(0.12, 0.22, 4), furDark, -0.14, 0.95, 0.52, 1, 1, 1, 0, 0, -0.15);
+    addPart(cat, new THREE.ConeGeometry(0.12, 0.22, 4), furDark, 0.14, 0.95, 0.52, 1, 1, 1, 0, 0, 0.15);
+    addPart(cat, new THREE.ConeGeometry(0.06, 0.12, 4), pink, -0.14, 0.92, 0.54);
+    addPart(cat, new THREE.ConeGeometry(0.06, 0.12, 4), pink, 0.14, 0.92, 0.54);
+    // Eyes
+    addPart(cat, new THREE.SphereGeometry(0.06, 10, 10), eyeWhite, -0.1, 0.76, 0.76);
+    addPart(cat, new THREE.SphereGeometry(0.06, 10, 10), eyeWhite, 0.1, 0.76, 0.76);
+    addPart(cat, new THREE.SphereGeometry(0.035, 8, 8), eyePupil, -0.1, 0.76, 0.81);
+    addPart(cat, new THREE.SphereGeometry(0.035, 8, 8), eyePupil, 0.1, 0.76, 0.81);
+    // Legs
+    const legGeo = new THREE.BoxGeometry(0.12, 0.32, 0.12);
+    const legs = [
+      addPart(cat, legGeo, furDark, -0.18, 0.16, 0.28),
+      addPart(cat, legGeo, furDark, 0.18, 0.16, 0.28),
+      addPart(cat, legGeo, furDark, -0.18, 0.16, -0.28),
+      addPart(cat, legGeo, furDark, 0.18, 0.16, -0.28),
+    ];
+    // Tail
+    const tail = addPart(
+      cat,
+      new THREE.CylinderGeometry(0.05, 0.07, 0.7, 8),
+      furDark,
+      0,
+      0.55,
+      -0.55,
+      1,
+      1,
+      1,
+      0.9,
+      0,
+      0.3
+    );
+
+    // Cat collision / movement state
+    const catState = {
+      yaw: 0,
+      speed: 3.2,
+      velY: 0,
+      onGround: true,
+      bob: 0,
+      holdingYarn: false,
+    };
+
+    // ——— Lighting ———
+    const hemi = new THREE.HemisphereLight(0xfff2e0, 0x4a3a2a, 0.55);
+    scene.add(hemi);
+
+    const sun = new THREE.DirectionalLight(0xfff0d8, 1.15);
+    sun.position.set(-4, 10, -6);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(1024, 1024);
+    sun.shadow.camera.near = 1;
+    sun.shadow.camera.far = 30;
+    sun.shadow.camera.left = -10;
+    sun.shadow.camera.right = 10;
+    sun.shadow.camera.top = 10;
+    sun.shadow.camera.bottom = -10;
+    scene.add(sun);
+
+    const lamp = new THREE.PointLight(0xffcc88, 0.7, 16);
+    lamp.position.set(2.8, 2.2, -3.2);
+    scene.add(lamp);
+
+    const doorLight = new THREE.PointLight(0xffe0b0, 0.35, 8);
+    doorLight.position.set(0, 2.5, frontZ - 1);
+    scene.add(doorLight);
+
+    // ——— Interaction state ———
+    const interactives = {
+      door: {
+        open: false,
+        angle: 0,
+        targetAngle: 0,
+        getPos: () => new THREE.Vector3(0, 0, frontZ - 0.5),
+        radius: 2.8,
+        labelClosed: "Press E / tap to open the door",
+        labelOpen: "Press E / tap to close the door",
+      },
+      yarn: {
+        picked: false,
+        getPos: () => yarnGroup.position.clone(),
+        radius: 2.4,
+        label: "Press E / tap to pick up the yarn",
+      },
+    };
+
+    let nearest = null;
+    let toastTimer = 0;
+
+    function showToast(msg) {
+      toastEl.textContent = msg;
+      toastEl.classList.add("visible");
+      toastTimer = 2.2;
+    }
+
+    function tryInteract() {
+      if (!nearest) return;
+
+      if (nearest === "door") {
+        interactives.door.open = !interactives.door.open;
+        interactives.door.targetAngle = interactives.door.open ? -Math.PI * 0.72 : 0;
+        showToast(interactives.door.open ? "Door opened!" : "Door closed.");
+        return;
+      }
+
+      if (nearest === "yarn" && !interactives.yarn.picked) {
+        interactives.yarn.picked = true;
+        catState.holdingYarn = true;
+        yarnMarker.visible = false;
+        showToast("Yarn picked up! Nice.");
+      }
+    }
+
+    // ——— Input ———
+    const keys = Object.create(null);
+    const stick = { x: 0, y: 0, active: false };
+
+    window.addEventListener("keydown", (e) => {
+      keys[e.code] = true;
+      if (e.code === "KeyE" || e.code === "Enter") {
+        e.preventDefault();
+        tryInteract();
+      }
+      if (["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.code)) {
+        e.preventDefault();
+      }
+    });
+    window.addEventListener("keyup", (e) => {
+      keys[e.code] = false;
+    });
+
+    // Click / tap on canvas to interact when near
+    canvas.addEventListener("pointerdown", (e) => {
+      if (e.target === canvas && nearest) tryInteract();
+    });
+
+    document.getElementById("btn-interact").addEventListener("pointerdown", (e) => {
+      e.preventDefault();
+      tryInteract();
+    });
+
+    // Virtual stick
+    const stickZone = document.getElementById("stick-zone");
+    const stickKnob = document.getElementById("stick-knob");
+    const STICK_MAX = 42;
+
+    function setStick(clientX, clientY) {
+      const rect = stickZone.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      let dx = clientX - cx;
+      let dy = clientY - cy;
+      const len = Math.hypot(dx, dy) || 1;
+      const clamped = Math.min(len, STICK_MAX);
+      dx = (dx / len) * clamped;
+      dy = (dy / len) * clamped;
+      stick.x = dx / STICK_MAX;
+      stick.y = dy / STICK_MAX;
+      stickKnob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+    }
+
+    function resetStick() {
+      stick.x = 0;
+      stick.y = 0;
+      stick.active = false;
+      stickKnob.style.transform = "translate(-50%, -50%)";
+    }
+
+    stickZone.addEventListener("pointerdown", (e) => {
+      stick.active = true;
+      stickZone.setPointerCapture(e.pointerId);
+      setStick(e.clientX, e.clientY);
+    });
+    stickZone.addEventListener("pointermove", (e) => {
+      if (!stick.active) return;
+      setStick(e.clientX, e.clientY);
+    });
+    stickZone.addEventListener("pointerup", resetStick);
+    stickZone.addEventListener("pointercancel", resetStick);
+
+    // Detect touch devices for mobile UI
+    if (window.matchMedia("(pointer: coarse)").matches || "ontouchstart" in window) {
+      document.body.classList.add("is-touch");
+    }
+
+    // ——— Camera follow ———
+    const camOffset = new THREE.Vector3(0, 3.2, 5.5);
+    const camLook = new THREE.Vector3();
+    const camPos = new THREE.Vector3();
+
+    function updateCamera(dt) {
+      const behind = new THREE.Vector3(
+        Math.sin(catState.yaw) * camOffset.z,
+        camOffset.y,
+        Math.cos(catState.yaw) * camOffset.z
+      );
+      const desired = cat.position.clone().add(behind);
+      camPos.lerp(desired, 1 - Math.pow(0.001, dt));
+      camera.position.copy(camPos);
+      camLook.copy(cat.position).add(new THREE.Vector3(0, 0.7, 0));
+      camera.lookAt(camLook);
+    }
+
+    // ——— Bounds ———
+    const halfW = ROOM.w / 2 - 0.55;
+    const halfD = ROOM.d / 2 - 0.55;
+
+    function clampCat() {
+      // Soft wall collision; allow leaving through open door
+      let x = cat.position.x;
+      let z = cat.position.z;
+
+      x = THREE.MathUtils.clamp(x, -halfW, halfW);
+
+      const nearDoor = Math.abs(x) < doorW / 2 - 0.15;
+      const doorOpenEnough = interactives.door.angle < -0.5;
+
+      if (z > halfD) {
+        if (nearDoor && doorOpenEnough) {
+          z = Math.min(z, halfD + 2.5);
+        } else {
+          z = halfD;
+        }
+      }
+      if (z < -halfD) z = -halfD;
+
+      cat.position.x = x;
+      cat.position.z = z;
+    }
+
+    // ——— Loop ———
+    const clock = new THREE.Clock();
+    let markerPulse = 0;
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const dt = Math.min(clock.getDelta(), 0.05);
+      markerPulse += dt;
+
+      // Movement input
+      let ix = 0;
+      let iz = 0;
+      if (keys["KeyW"] || keys["ArrowUp"]) iz -= 1;
+      if (keys["KeyS"] || keys["ArrowDown"]) iz += 1;
+      if (keys["KeyA"] || keys["ArrowLeft"]) ix -= 1;
+      if (keys["KeyD"] || keys["ArrowRight"]) ix += 1;
+      ix += stick.x;
+      iz += stick.y;
+
+      const inputLen = Math.hypot(ix, iz);
+      if (inputLen > 1) {
+        ix /= inputLen;
+        iz /= inputLen;
+      }
+
+      if (inputLen > 0.05) {
+        // Camera-relative movement on XZ
+        const forward = new THREE.Vector3();
+        camera.getWorldDirection(forward);
+        forward.y = 0;
+        forward.normalize();
+        const right = new THREE.Vector3().crossVectors(forward, new THREE.Vector3(0, 1, 0)).normalize();
+
+        // Stick/keys: iz forward/back relative to camera, ix strafe
+        // Our iz+: screen down / S = move toward camera (backward)
+        const move = new THREE.Vector3()
+          .addScaledVector(forward, -iz)
+          .addScaledVector(right, ix);
+
+        if (move.lengthSq() > 0.0001) {
+          move.normalize();
+          cat.position.addScaledVector(move, catState.speed * dt);
+          catState.yaw = Math.atan2(move.x, move.z);
+          cat.rotation.y = catState.yaw;
+          catState.bob += dt * 12;
+          const bob = Math.sin(catState.bob) * 0.04;
+          legs[0].position.y = 0.16 + bob;
+          legs[1].position.y = 0.16 - bob;
+          legs[2].position.y = 0.16 - bob;
+          legs[3].position.y = 0.16 + bob;
+          tail.rotation.z = 0.3 + Math.sin(catState.bob * 0.5) * 0.25;
+        }
+      } else {
+        legs.forEach((l) => (l.position.y = 0.16));
+      }
+
+      // Jump
+      if ((keys["Space"] || keys["KeyJ"]) && catState.onGround) {
+        catState.velY = 4.5;
+        catState.onGround = false;
+      }
+      catState.velY -= 14 * dt;
+      cat.position.y += catState.velY * dt;
+      if (cat.position.y <= 0) {
+        cat.position.y = 0;
+        catState.velY = 0;
+        catState.onGround = true;
+      }
+
+      clampCat();
+
+      // Door animation
+      interactives.door.angle = THREE.MathUtils.damp(
+        interactives.door.angle,
+        interactives.door.targetAngle,
+        6,
+        dt
+      );
+      doorPivot.rotation.y = interactives.door.angle;
+
+      // Yarn follow / bob
+      if (catState.holdingYarn) {
+        const hold = new THREE.Vector3(0.35, 0.55, 0.15);
+        hold.applyAxisAngle(new THREE.Vector3(0, 1, 0), catState.yaw);
+        yarnGroup.position.lerp(cat.position.clone().add(hold), 1 - Math.pow(0.0001, dt));
+        yarnGroup.position.y = 0.55 + Math.sin(markerPulse * 4) * 0.04;
+        yarnGroup.rotation.y += dt * 2;
+      } else {
+        yarnGroup.position.y = 0.22 + Math.sin(markerPulse * 3) * 0.03;
+        yarnGroup.rotation.y += dt * 0.8;
+      }
+
+      // Markers pulse
+      const pulse = 0.4 + Math.sin(markerPulse * 3) * 0.2;
+      doorMarker.material.opacity = pulse;
+      if (yarnMarker.visible) yarnMarker.material.opacity = pulse;
+
+      // Nearest interactive (horizontal distance only — ignore jump height)
+      nearest = null;
+      let bestDist = Infinity;
+      const catXZ = new THREE.Vector2(cat.position.x, cat.position.z);
+
+      function horizDist(pos) {
+        return catXZ.distanceTo(new THREE.Vector2(pos.x, pos.z));
+      }
+
+      const doorPos = interactives.door.getPos();
+      const dDoor = horizDist(doorPos);
+      if (dDoor < interactives.door.radius && dDoor < bestDist) {
+        nearest = "door";
+        bestDist = dDoor;
+      }
+
+      if (!interactives.yarn.picked) {
+        const yarnPos = interactives.yarn.getPos();
+        const dYarn = horizDist(yarnPos);
+        if (dYarn < interactives.yarn.radius && dYarn < bestDist) {
+          nearest = "yarn";
+          bestDist = dYarn;
+        }
+      }
+
+      if (nearest === "door") {
+        promptEl.textContent = interactives.door.open
+          ? interactives.door.labelOpen
+          : interactives.door.labelClosed;
+        promptEl.classList.add("visible");
+      } else if (nearest === "yarn") {
+        promptEl.textContent = interactives.yarn.label;
+        promptEl.classList.add("visible");
+      } else {
+        promptEl.classList.remove("visible");
+      }
+
+      if (toastTimer > 0) {
+        toastTimer -= dt;
+        if (toastTimer <= 0) toastEl.classList.remove("visible");
+      }
+
+      updateCamera(dt);
+      renderer.render(scene, camera);
+    }
+
+    // Init camera
+    camPos.set(0, 3.2, 5.5);
+    camera.position.copy(camPos);
+
+    window.addEventListener("resize", () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    animate();
+  </script>
+</body>
+</html>
