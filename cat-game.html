@@ -65,7 +65,7 @@
 
     #prompt {
       position: absolute;
-      bottom: max(120px, calc(env(safe-area-inset-bottom) + 110px));
+      bottom: max(160px, calc(env(safe-area-inset-bottom) + 190px));
       left: 50%;
       transform: translateX(-50%);
       background: var(--panel);
@@ -149,32 +149,52 @@
       pointer-events: none;
     }
 
-    #btn-interact {
+    .action-btns {
       position: absolute;
-      bottom: max(40px, calc(env(safe-area-inset-bottom) + 20px));
-      right: 22px;
-      width: 84px;
-      height: 84px;
+      right: 18px;
+      bottom: max(28px, calc(env(safe-area-inset-bottom) + 12px));
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+      pointer-events: auto;
+    }
+
+    .action-btn {
+      width: 78px;
+      height: 78px;
       border-radius: 50%;
       border: 2px solid rgba(243, 230, 212, 0.45);
-      background: rgba(196, 92, 38, 0.8);
       color: var(--cream);
-      font-size: 1.2rem;
+      font-size: 0.95rem;
       font-weight: 700;
+      letter-spacing: 0.02em;
       pointer-events: auto;
       cursor: pointer;
       box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
       -webkit-tap-highlight-color: transparent;
       touch-action: manipulation;
+      line-height: 1.05;
     }
 
-    #btn-interact:active {
+    #btn-jump {
+      background: rgba(70, 120, 160, 0.85);
+      width: 88px;
+      height: 88px;
+      font-size: 1.05rem;
+    }
+
+    #btn-interact {
+      background: rgba(196, 92, 38, 0.8);
+    }
+
+    .action-btn:active {
       transform: scale(0.94);
-      background: rgba(196, 92, 38, 0.95);
+      filter: brightness(1.12);
     }
 
     body.is-touch #title p::after {
-      content: " Drag left to walk, push farther to run · tap E near rings.";
+      content: " Drag left to walk/run · JUMP to leap · E near rings.";
     }
 
     #help {
@@ -197,19 +217,22 @@
 
   <div id="hud">
     <div id="title">
-      <h1>Zoomer</h1>
-      <p>Help Zoomer explore the room. Walk or run, then interact with the door or yarn.</p>
+      <h1>Zoomer Simulator</h1>
+      <p>Play as Zoomer. Walk or run around the room, then interact with the door or yarn.</p>
     </div>
     <div id="prompt" aria-live="polite"></div>
     <div id="toast" aria-live="polite"></div>
-    <div id="help">WASD / arrows walk · hold Shift or push stick hard to run · E to interact · Space jump</div>
+    <div id="help">WASD / arrows walk · hold Shift or push stick hard to run · Space / J jump · E interact</div>
     <div id="mobile-controls">
       <div class="stick-zone" id="stick-zone">
         <div class="stick-base">
           <div class="stick-knob" id="stick-knob"></div>
         </div>
       </div>
-      <button type="button" id="btn-interact" aria-label="Interact">E</button>
+      <div class="action-btns">
+        <button type="button" class="action-btn" id="btn-jump" aria-label="Jump">JUMP</button>
+        <button type="button" class="action-btn" id="btn-interact" aria-label="Interact">E</button>
+      </div>
     </div>
   </div>
 
@@ -688,12 +711,25 @@
       velZ: 0,
       velY: 0,
       onGround: true,
+      jumpQueued: false,
+      jumpForce: 6.8,
+      gravity: 16,
       animTime: 0,
       gait: "idle", // idle | walk | run
       holdingYarn: false,
     };
 
+    function requestJump() {
+      if (catState.onGround) catState.jumpQueued = true;
+    }
+
     function updateCatAnimation(dt, speedNow, moving) {
+      // Airborne pose is handled in the jump block
+      if (!catState.onGround) {
+        catState.gait = "jump";
+        return;
+      }
+
       const runThreshold = catState.walkSpeed * 0.72;
       let gait = "idle";
       if (moving && speedNow > 0.25) {
@@ -888,6 +924,12 @@
       e.preventDefault();
       e.stopPropagation();
       tryInteract();
+    });
+
+    document.getElementById("btn-jump").addEventListener("pointerdown", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      requestJump();
     });
 
     // Floating virtual stick — appear under thumb anywhere on left pad
@@ -1131,13 +1173,31 @@
       const speedNow = Math.hypot(catState.velX, catState.velZ);
       updateCatAnimation(dt, speedNow, moving || speedNow > 0.2);
 
-      // Jump
-      if ((keys["Space"] || keys["KeyJ"]) && catState.onGround) {
-        catState.velY = 4.5;
+      // Jump (Space / J / on-screen JUMP)
+      if ((keys["Space"] || keys["KeyJ"] || catState.jumpQueued) && catState.onGround) {
+        catState.velY = catState.jumpForce;
         catState.onGround = false;
+        catState.jumpQueued = false;
+        // Quick tuck so the leap reads clearly
+        for (const leg of legs) {
+          leg.pivot.rotation.x = -0.55;
+          leg.lower.rotation.x = 0.7;
+        }
+        torso.rotation.x = -0.15;
+      } else {
+        catState.jumpQueued = false;
       }
-      catState.velY -= 14 * dt;
+      catState.velY -= catState.gravity * dt;
       cat.position.y += catState.velY * dt;
+      if (!catState.onGround) {
+        // Hold a tucked pose in the air
+        const tuck = catState.velY > 0 ? -0.45 : -0.2;
+        for (const leg of legs) {
+          leg.pivot.rotation.x = THREE.MathUtils.damp(leg.pivot.rotation.x, tuck, 10, dt);
+        }
+        torso.position.y = THREE.MathUtils.damp(torso.position.y, 0.34, 8, dt);
+        tailRoot.rotation.x = THREE.MathUtils.damp(tailRoot.rotation.x, 0.35, 8, dt);
+      }
       if (cat.position.y <= 0) {
         cat.position.y = 0;
         catState.velY = 0;
