@@ -43,6 +43,40 @@
       max-width: 42ch;
       text-shadow: 0 1px 8px rgba(0, 0, 0, 0.5);
     }
+    #quest {
+      position: absolute;
+      top: max(12px, env(safe-area-inset-top));
+      right: 14px;
+      max-width: min(280px, 70vw);
+      background: var(--panel);
+      border: 1px solid rgba(243, 230, 212, 0.28);
+      border-radius: 10px;
+      padding: 10px 12px;
+      backdrop-filter: blur(8px);
+      text-shadow: none;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+    }
+    #quest .qlabel {
+      font-size: 0.68rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      opacity: 0.7;
+      margin-bottom: 4px;
+    }
+    #quest .qtitle {
+      font-size: 0.95rem;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    #quest .qstep {
+      font-size: 0.82rem;
+      opacity: 0.92;
+      line-height: 1.35;
+    }
+    #quest.done {
+      border-color: rgba(120, 200, 120, 0.55);
+    }
+    #title { right: min(300px, 72vw); }
     #prompt {
       position: absolute;
       bottom: max(180px, calc(env(safe-area-inset-bottom) + 220px));
@@ -164,7 +198,7 @@
     }
     .action-btn:active { transform: scale(0.94); filter: brightness(1.12); }
     body.is-touch #title p::after {
-      content: " Drag left to move (auto-runs) · big JUMP · E lights up near stuff.";
+      content: " Chase the bunny · catch with E · drop on the porch.";
     }
     #help {
       position: absolute;
@@ -185,7 +219,12 @@
   <div id="hud">
     <div id="title">
       <h1>Zoomer Simulator</h1>
-      <p>Map 1 — W 153rd Terrace cul-de-sac, Olathe. Run the block as Zoomer.</p>
+      <p>Map 1 — W 153rd Terrace cul-de-sac, Olathe.</p>
+    </div>
+    <div id="quest" aria-live="polite">
+      <div class="qlabel">Quest 1</div>
+      <div class="qtitle">Bunny Delivery</div>
+      <div class="qstep" id="quest-step">Catch the bunny hopping around the cul-de-sac.</div>
     </div>
     <div id="prompt" aria-live="polite"></div>
     <div id="toast" aria-live="polite"></div>
@@ -228,13 +267,13 @@
 
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x87b5d9);
-    scene.fog = new THREE.Fog(0x9ec4e0, 55, 120);
+    scene.fog = new THREE.Fog(0x9ec4e0, 90, 220);
 
     const camera = new THREE.PerspectiveCamera(
       55,
       window.innerWidth / window.innerHeight,
       0.1,
-      200
+      350
     );
 
     // ——— Occlusion (houses/walls ghost when blocking Zoomer) ———
@@ -275,59 +314,80 @@
     const fenceMat = makeOccluderMaterial(0x6b5a45, 0.9);
     const trunkMat = new THREE.MeshStandardMaterial({ color: 0x5a4030, roughness: 0.9 });
     const leafMat = new THREE.MeshStandardMaterial({ color: 0x3f7a38, roughness: 0.85 });
+    const leafDark = new THREE.MeshStandardMaterial({ color: 0x2f5e2c, roughness: 0.88 });
+    const windowMat = new THREE.MeshStandardMaterial({
+      color: 0xa8d4ef, emissive: 0x3a5a70, emissiveIntensity: 0.15, roughness: 0.35, metalness: 0.1,
+    });
+    const trimWhite = makeOccluderMaterial(0xe8e4dc, 0.7);
+    const porchMat = new THREE.MeshStandardMaterial({ color: 0xb7a78c, roughness: 0.85 });
+    const shrubMat = new THREE.MeshStandardMaterial({ color: 0x3d6b34, roughness: 0.9 });
 
-    // ——— Ground / lawns ———
-    const ground = new THREE.Mesh(new THREE.PlaneGeometry(160, 120), grassMat);
+    // ——— Ground / lawns (scaled so Zoomer feels cat-sized) ———
+    const ground = new THREE.Mesh(new THREE.PlaneGeometry(320, 240), grassMat);
     ground.rotation.x = -Math.PI / 2;
     ground.receiveShadow = true;
     scene.add(ground);
 
-    // ——— Cul-de-sac road: E–W stem + eastern bulb (rough W 153rd Terrace) ———
-    // Units ≈ meters. +X = east, -Z = north, +Z = south.
+    // Subtle lawn striping
+    const lawnStripe = new THREE.MeshStandardMaterial({ color: 0x47853e, roughness: 1 });
+    for (let i = -8; i <= 8; i++) {
+      const stripe = new THREE.Mesh(new THREE.PlaneGeometry(300, 4.5), lawnStripe);
+      stripe.rotation.x = -Math.PI / 2;
+      stripe.position.set(0, 0.01, i * 12);
+      stripe.receiveShadow = true;
+      scene.add(stripe);
+    }
+
+    // ——— Cul-de-sac road (≈ meters; houses ~2.5× prior size vs Zoomer) ———
+    // +X = east, -Z = north, +Z = south.
     const ROAD_Y = 0.02;
-    const roadW = 7.2;
-    const stemLen = 78;
-    const stemCenterX = -8; // stem from ~-47 to ~31
-    const bulbR = 14;
-    const bulbCX = 38;
+    const roadW = 18;
+    const stemLen = 170;
+    const stemCenterX = -15;
+    const bulbR = 32;
+    const bulbCX = 82;
     const bulbCZ = 0;
 
-    const stem = new THREE.Mesh(
-      new THREE.PlaneGeometry(stemLen, roadW),
-      roadMat
-    );
+    const stem = new THREE.Mesh(new THREE.PlaneGeometry(stemLen, roadW), roadMat);
     stem.rotation.x = -Math.PI / 2;
     stem.position.set(stemCenterX, ROAD_Y, 0);
     stem.receiveShadow = true;
     scene.add(stem);
 
-    const bulb = new THREE.Mesh(new THREE.CircleGeometry(bulbR, 48), roadMat);
+    const bulb = new THREE.Mesh(new THREE.CircleGeometry(bulbR, 64), roadMat);
     bulb.rotation.x = -Math.PI / 2;
     bulb.position.set(bulbCX, ROAD_Y + 0.001, bulbCZ);
     bulb.receiveShadow = true;
     scene.add(bulb);
 
-    // Hillside St stub (T-junction from south into 153rd)
-    const hillside = new THREE.Mesh(new THREE.PlaneGeometry(roadW, 36), roadMat);
+    // Center dashed line on stem
+    for (let i = -6; i <= 5; i++) {
+      const dash = new THREE.Mesh(
+        new THREE.PlaneGeometry(4.5, 0.35),
+        new THREE.MeshBasicMaterial({ color: 0xd8d4c8 })
+      );
+      dash.rotation.x = -Math.PI / 2;
+      dash.position.set(stemCenterX + i * 12, ROAD_Y + 0.025, 0);
+      scene.add(dash);
+    }
+
+    const hillside = new THREE.Mesh(new THREE.PlaneGeometry(roadW, 70), roadMat);
     hillside.rotation.x = -Math.PI / 2;
-    hillside.position.set(-42, ROAD_Y, 22);
+    hillside.position.set(-88, ROAD_Y, 42);
     hillside.receiveShadow = true;
     scene.add(hillside);
 
-    // Sidewalks along stem (both sides)
-    function sidewalk(len, x, z, rot = 0) {
-      const s = new THREE.Mesh(new THREE.PlaneGeometry(len, 1.4), walkMat);
+    function sidewalk(len, x, z) {
+      const s = new THREE.Mesh(new THREE.PlaneGeometry(len, 2.4), walkMat);
       s.rotation.x = -Math.PI / 2;
-      s.rotation.z = rot;
       s.position.set(x, ROAD_Y + 0.015, z);
       s.receiveShadow = true;
       scene.add(s);
     }
-    sidewalk(stemLen, stemCenterX, -(roadW / 2 + 1.1));
-    sidewalk(stemLen, stemCenterX, roadW / 2 + 1.1);
-    // Bulb ring sidewalk (approx using torus flat)
+    sidewalk(stemLen, stemCenterX, -(roadW / 2 + 2.2));
+    sidewalk(stemLen, stemCenterX, roadW / 2 + 2.2);
     const walkRing = new THREE.Mesh(
-      new THREE.RingGeometry(bulbR + 0.4, bulbR + 1.8, 48),
+      new THREE.RingGeometry(bulbR + 0.6, bulbR + 3.2, 64),
       walkMat
     );
     walkRing.rotation.x = -Math.PI / 2;
@@ -335,17 +395,15 @@
     walkRing.receiveShadow = true;
     scene.add(walkRing);
 
-    // Curbs along stem edges
     function curb(len, x, z) {
-      const c = new THREE.Mesh(new THREE.BoxGeometry(len, 0.12, 0.25), curbMat);
-      c.position.set(x, 0.06, z);
+      const c = new THREE.Mesh(new THREE.BoxGeometry(len, 0.18, 0.4), curbMat);
+      c.position.set(x, 0.09, z);
       c.castShadow = true;
       scene.add(c);
     }
     curb(stemLen, stemCenterX, -roadW / 2);
     curb(stemLen, stemCenterX, roadW / 2);
 
-    // ——— Simple suburban house builder ———
     function addBox(parent, w, h, d, mat, x, y, z, occlude = true) {
       const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
       m.position.set(x, y, z);
@@ -356,30 +414,49 @@
       return m;
     }
 
+    function makeWindow(parent, x, y, z, ww = 1.6, wh = 1.4) {
+      addBox(parent, ww + 0.25, wh + 0.25, 0.12, trimWhite, x, y, z, false);
+      addBox(parent, ww, wh, 0.08, windowMat, x, y, z + 0.02, false);
+      addBox(parent, 0.08, wh, 0.1, trimWhite, x, y, z + 0.05, false);
+      addBox(parent, ww, 0.08, 0.1, trimWhite, x, y, z + 0.05, false);
+    }
+
     function makeTree(x, z, scale = 1) {
       const g = new THREE.Group();
       g.position.set(x, 0, z);
       const trunk = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.18 * scale, 0.25 * scale, 2.2 * scale, 6),
+        new THREE.CylinderGeometry(0.35 * scale, 0.5 * scale, 4.2 * scale, 7),
         trunkMat
       );
-      trunk.position.y = 1.1 * scale;
+      trunk.position.y = 2.1 * scale;
       trunk.castShadow = true;
       g.add(trunk);
-      const canopy = new THREE.Mesh(
-        new THREE.SphereGeometry(1.6 * scale, 10, 10),
-        leafMat
-      );
-      canopy.position.y = 3.0 * scale;
-      canopy.castShadow = true;
-      g.add(canopy);
+      const c1 = new THREE.Mesh(new THREE.SphereGeometry(2.4 * scale, 10, 10), leafMat);
+      c1.position.set(0, 5.2 * scale, 0);
+      c1.castShadow = true;
+      g.add(c1);
+      const c2 = new THREE.Mesh(new THREE.SphereGeometry(1.8 * scale, 8, 8), leafDark);
+      c2.position.set(1.1 * scale, 4.6 * scale, 0.6 * scale);
+      c2.castShadow = true;
+      g.add(c2);
+      const c3 = new THREE.Mesh(new THREE.SphereGeometry(1.6 * scale, 8, 8), leafMat);
+      c3.position.set(-0.9 * scale, 4.8 * scale, -0.5 * scale);
+      g.add(c3);
       scene.add(g);
       return g;
     }
 
+    function makeShrub(parent, x, z, s = 1) {
+      const bush = new THREE.Mesh(new THREE.SphereGeometry(0.7 * s, 8, 8), shrubMat);
+      bush.position.set(x, 0.55 * s, z);
+      bush.scale.y = 0.75;
+      bush.castShadow = true;
+      parent.add(bush);
+    }
+
     function makeHouse(opts) {
       const {
-        x, z, rotY = 0, w = 11, d = 9, stories = 2,
+        x, z, rotY = 0, w = 24, d = 18, stories = 2,
         siding = sidingA, roof = roofMat, label = "", home = false,
       } = opts;
       const group = new THREE.Group();
@@ -387,68 +464,91 @@
       group.rotation.y = rotY;
       scene.add(group);
 
-      const h = stories === 2 ? 5.6 : 3.4;
+      const h = stories === 2 ? 11.5 : 6.5;
       addBox(group, w, h, d, siding, 0, h / 2, 0);
-      // Brick accent band
-      addBox(group, w + 0.05, 1.1, d + 0.05, brickMat, 0, 0.55, 0);
-      // Roof (simple gable-ish: two slabs)
-      const roofH = 1.4;
-      const r1 = addBox(group, w + 0.6, 0.25, d * 0.72, roof, 0, h + 0.5, 0.15);
-      r1.rotation.x = -0.35;
-      const r2 = addBox(group, w + 0.6, 0.25, d * 0.72, roof, 0, h + 0.5, -0.15);
-      r2.rotation.x = 0.35;
-      // Garage bump on street side (+local Z)
-      addBox(group, 5.2, 2.6, 3.2, siding, w * 0.22, 1.3, d / 2 + 1.0);
-      addBox(group, 4.4, 2.0, 0.2, garageMat, w * 0.22, 1.1, d / 2 + 2.55, false);
-      // Driveway toward street
-      const drive = new THREE.Mesh(new THREE.PlaneGeometry(4.6, 8), driveMat);
+      addBox(group, w + 0.12, 1.8, d + 0.12, brickMat, 0, 0.9, 0);
+      // Gabled roof slabs
+      const r1 = addBox(group, w + 1.2, 0.35, d * 0.7, roof, 0, h + 1.1, 0.35);
+      r1.rotation.x = -0.42;
+      const r2 = addBox(group, w + 1.2, 0.35, d * 0.7, roof, 0, h + 1.1, -0.35);
+      r2.rotation.x = 0.42;
+      // Chimney
+      addBox(group, 1.4, 2.8, 1.4, brickMat, w * 0.28, h + 2.2, -d * 0.15);
+      // Windows front
+      makeWindow(group, -w * 0.28, h * 0.62, d / 2 + 0.05);
+      makeWindow(group, w * 0.08, h * 0.62, d / 2 + 0.05);
+      makeWindow(group, -w * 0.28, h * 0.28, d / 2 + 0.05, 1.5, 1.3);
+      // Side windows
+      makeWindow(group, -w / 2 - 0.05, h * 0.55, 0, 1.4, 1.3);
+      // Garage
+      addBox(group, 9.5, 4.6, 6.5, siding, w * 0.28, 2.3, d / 2 + 2.2);
+      addBox(group, 8.2, 3.4, 0.25, garageMat, w * 0.28, 1.9, d / 2 + 5.4, false);
+      addBox(group, 9.7, 0.3, 6.7, roof, w * 0.28, 4.7, d / 2 + 2.2);
+      // Driveway
+      const drive = new THREE.Mesh(new THREE.PlaneGeometry(8.5, 16), driveMat);
       drive.rotation.x = -Math.PI / 2;
-      drive.position.set(w * 0.22, ROAD_Y + 0.018, d / 2 + 6);
+      drive.position.set(w * 0.28, ROAD_Y + 0.018, d / 2 + 12);
       group.add(drive);
 
+      // Front walk
+      const path = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 10), walkMat);
+      path.rotation.x = -Math.PI / 2;
+      path.position.set(-w * 0.22, ROAD_Y + 0.02, d / 2 + 6);
+      group.add(path);
+
+      makeShrub(group, -w * 0.4, d / 2 + 1.2, 1.1);
+      makeShrub(group, -w * 0.15, d / 2 + 1.0, 0.9);
+      makeShrub(group, w * 0.45, d / 2 + 1.1, 1.0);
+
       if (home) {
-        // Front door (interactive)
+        // Covered porch for gift drop-off
+        addBox(group, 8.5, 0.35, 4.2, porchMat, -w * 0.22, 0.35, d / 2 + 2.0, false);
+        addBox(group, 0.35, 2.8, 0.35, trimWhite, -w * 0.22 - 3.8, 1.7, d / 2 + 3.8, false);
+        addBox(group, 0.35, 2.8, 0.35, trimWhite, -w * 0.22 + 3.8, 1.7, d / 2 + 3.8, false);
+        addBox(group, 8.7, 0.25, 4.4, roof, -w * 0.22, 3.2, d / 2 + 2.0);
+        // Steps
+        addBox(group, 3.2, 0.25, 1.1, porchMat, -w * 0.22, 0.2, d / 2 + 4.4, false);
+        addBox(group, 3.2, 0.25, 1.1, porchMat, -w * 0.22, 0.45, d / 2 + 3.6, false);
+
         const door = addBox(
-          group,
-          1.1,
-          2.2,
-          0.12,
-          makeOccluderMaterial(0x5c3a24, 0.65),
-          -1.4,
-          1.15,
-          d / 2 + 0.06
+          group, 1.6, 3.0, 0.16, makeOccluderMaterial(0x5c3a24, 0.65),
+          -w * 0.22, 1.85, d / 2 + 0.08
         );
         door.name = "homeDoor";
         group.userData.door = door;
-        group.userData.doorLocal = new THREE.Vector3(-1.4, 0, d / 2 + 0.5);
+        group.userData.doorLocal = new THREE.Vector3(-w * 0.22, 0.4, d / 2 + 0.8);
+        group.userData.porchLocal = new THREE.Vector3(-w * 0.22, 0.55, d / 2 + 2.4);
+        addBox(group, 2.0, 0.4, 0.1, makeOccluderMaterial(0x2a2a2e), -w * 0.22, 3.5, d / 2 + 0.12, false);
 
-        // Address plaque vibe
-        const plaque = addBox(group, 1.4, 0.35, 0.08, makeOccluderMaterial(0x2a2a2e), -1.4, 2.5, d / 2 + 0.08, false);
+        // Mailbox by the curb
+        const mail = new THREE.Group();
+        mail.position.set(-w * 0.05, 0, d / 2 + 14);
+        group.add(mail);
+        addBox(mail, 0.12, 1.3, 0.12, trimWhite, 0, 0.65, 0, false);
+        addBox(mail, 0.55, 0.4, 0.35, makeOccluderMaterial(0x2f4a7a), 0, 1.4, 0, false);
       }
 
       if (label) group.userData.label = label;
       group.userData.home = home;
-      // Back fence
-      addBox(group, w + 4, 1.3, 0.12, fenceMat, 0, 0.65, -d / 2 - 6);
+      group.userData.hw = w / 2 + 1.5;
+      group.userData.hd = d / 2 + 4;
+      addBox(group, w + 8, 2.0, 0.18, fenceMat, 0, 1.0, -d / 2 - 12);
       return group;
     }
 
-    // North-side houses facing south (rotY = 0 means local +Z is street)
-    // 18504 is just west of bulb entrance on north side
+    // 18504 — north side, just west of bulb
     const home18504 = makeHouse({
-      x: 8, z: -16.5, w: 12, d: 10, siding: sidingA, roof: roofMat,
+      x: 18, z: -36, w: 26, d: 20, siding: sidingA, roof: roofMat,
       label: "18504", home: true,
     });
-    makeHouse({ x: -6, z: -16.5, w: 11, d: 9.5, siding: sidingB, roof: roofBrown, label: "18524" });
-    makeHouse({ x: -20, z: -16.5, w: 11, d: 9, siding: sidingC, roof: roofMat, label: "18544" });
-    makeHouse({ x: -34, z: -16.5, w: 10.5, d: 9, siding: sidingA, roof: roofBrown, label: "18564" });
+    makeHouse({ x: -16, z: -36, w: 24, d: 19, siding: sidingB, roof: roofBrown, label: "18524" });
+    makeHouse({ x: -48, z: -36, w: 24, d: 18, siding: sidingC, roof: roofMat, label: "18544" });
+    makeHouse({ x: -80, z: -36, w: 23, d: 18, siding: sidingA, roof: roofBrown, label: "18564" });
 
-    // South-side houses facing north (rotate 180°)
-    makeHouse({ x: -6, z: 16.5, rotY: Math.PI, w: 11, d: 9, siding: sidingB, roof: roofMat, label: "18505" });
-    makeHouse({ x: -20, z: 16.5, rotY: Math.PI, w: 11, d: 9.5, siding: sidingA, roof: roofBrown, label: "18475" });
-    makeHouse({ x: -34, z: 16.5, rotY: Math.PI, w: 10.5, d: 9, siding: sidingC, roof: roofMat, label: "18585" });
+    makeHouse({ x: -16, z: 36, rotY: Math.PI, w: 24, d: 18, siding: sidingB, roof: roofMat, label: "18505" });
+    makeHouse({ x: -48, z: 36, rotY: Math.PI, w: 24, d: 19, siding: sidingA, roof: roofBrown, label: "18475" });
+    makeHouse({ x: -80, z: 36, rotY: Math.PI, w: 23, d: 18, siding: sidingC, roof: roofMat, label: "18585" });
 
-    // Houses around the bulb — radial, facing center
     const bulbHomes = [
       { ang: -0.55, label: "18444", siding: sidingA },
       { ang: 0.15, label: "18424", siding: sidingB },
@@ -458,61 +558,45 @@
       { ang: -1.25, label: "18445", siding: sidingC },
     ];
     for (const bh of bulbHomes) {
-      const r = bulbR + 15;
+      const r = bulbR + 30;
       const hx = bulbCX + Math.cos(bh.ang) * r;
       const hz = bulbCZ + Math.sin(bh.ang) * r;
-      // Face toward bulb center
-      const rot = bh.ang + Math.PI;
       makeHouse({
-        x: hx, z: hz, rotY: rot, w: 10.5, d: 9,
+        x: hx, z: hz, rotY: bh.ang + Math.PI, w: 23, d: 18,
         siding: bh.siding, roof: Math.random() > 0.5 ? roofMat : roofBrown,
         label: bh.label,
       });
     }
 
-    // Trees — front yards + buffer north
     const treeSpots = [
-      [8, -10], [12, -11], [4, -9.5], [-6, -10], [-20, -10.5], [-34, -10],
-      [-6, 10], [-20, 10.5], [-34, 11],
-      [8, -28], [-10, -30], [20, -26], [45, -8], [50, 8], [55, -2],
-      [30, 22], [42, 24], [-45, -8], [-48, 10], [0, -32],
-      [bulbCX + 8, bulbCZ - 20], [bulbCX - 2, bulbCZ + 22],
+      [18, -22], [28, -24], [8, -21], [-16, -22], [-48, -23], [-80, -22],
+      [-16, 22], [-48, 23], [-80, 24],
+      [18, -58], [-20, -62], [40, -55], [95, -18], [110, 16], [118, -4],
+      [70, 48], [90, 52], [-100, -16], [-105, 22], [0, -66],
+      [bulbCX + 18, bulbCZ - 42], [bulbCX - 6, bulbCZ + 46],
+      [50, -20], [60, 18], [-30, -20], [-60, 20],
     ];
-    for (const [tx, tz] of treeSpots) makeTree(tx, tz, 0.85 + Math.random() * 0.45);
+    for (const [tx, tz] of treeSpots) makeTree(tx, tz, 1.15 + Math.random() * 0.55);
 
-    // Street label markers (flat)
-    function streetLabel(text, x, z) {
-      // simple asphalt paint stripe as stand-in
-      const m = new THREE.Mesh(
-        new THREE.PlaneGeometry(6, 0.35),
-        new THREE.MeshBasicMaterial({ color: 0xf0f0f0 })
-      );
-      m.rotation.x = -Math.PI / 2;
-      m.position.set(x, ROAD_Y + 0.03, z);
-      scene.add(m);
-    }
-    streetLabel("153rd", -10, 0);
-    streetLabel("bulb", bulbCX, 0);
-
-    // ——— Lighting (outdoor daytime) ———
+    // ——— Lighting ———
     scene.add(new THREE.HemisphereLight(0xcfe8ff, 0x5a6a40, 0.7));
     const sun = new THREE.DirectionalLight(0xfff2d6, 1.25);
-    sun.position.set(-30, 45, -20);
+    sun.position.set(-50, 80, -40);
     sun.castShadow = true;
     sun.shadow.mapSize.set(2048, 2048);
     sun.shadow.camera.near = 5;
-    sun.shadow.camera.far = 120;
-    sun.shadow.camera.left = -60;
-    sun.shadow.camera.right = 60;
-    sun.shadow.camera.top = 60;
-    sun.shadow.camera.bottom = -60;
+    sun.shadow.camera.far = 260;
+    sun.shadow.camera.left = -140;
+    sun.shadow.camera.right = 140;
+    sun.shadow.camera.top = 140;
+    sun.shadow.camera.bottom = -140;
     scene.add(sun);
 
     // ——— Zoomer ———
     const cat = new THREE.Group();
     scene.add(cat);
-    // Spawn in front yard of 18504, facing the street (+Z = south)
-    cat.position.set(8, 0, -8);
+    // Front yard of 18504, facing the street
+    cat.position.set(18, 0, -18);
 
     const fur = new THREE.MeshStandardMaterial({ color: 0x3a3a3e, roughness: 0.72, metalness: 0.04 });
     const furDark = new THREE.MeshStandardMaterial({ color: 0x2a2a2e, roughness: 0.75 });
@@ -615,8 +699,8 @@
 
     const catState = {
       yaw: 0, // +Z = south, toward W 153rd Terrace
-      walkSpeed: 3.4,
-      runSpeed: 7.2,
+      walkSpeed: 3.6,
+      runSpeed: 9.0,
       speed: 3.4,
       accel: 16,
       friction: 18,
@@ -630,7 +714,7 @@
       gravity: 16,
       animTime: 0,
       gait: "idle",
-      holdingYarn: false,
+      holdingBunny: false,
     };
     cat.rotation.y = catState.yaw;
 
@@ -718,86 +802,185 @@
       }
     }
 
-    // ——— Interactives: front door + yarn in yard ———
-    const yarnGroup = new THREE.Group();
-    yarnGroup.position.set(11, 0.22, -7);
-    scene.add(yarnGroup);
-    const yarn = new THREE.Mesh(
-      new THREE.SphereGeometry(0.22, 16, 16),
-      new THREE.MeshStandardMaterial({ color: 0xc45c26, roughness: 0.9 })
-    );
-    yarn.castShadow = true;
-    yarnGroup.add(yarn);
-    const swirlMat = new THREE.MeshStandardMaterial({ color: 0x9a3d14 });
-    for (let i = 0; i < 3; i++) {
-      const ring = new THREE.Mesh(new THREE.TorusGeometry(0.16 - i * 0.03, 0.018, 8, 24), swirlMat);
-      ring.rotation.x = Math.PI / 2 + i * 0.4;
-      ring.rotation.y = i * 0.7;
-      yarnGroup.add(ring);
+    // ——— Quest 1: catch bunny → deliver to porch ———
+    const questEl = document.getElementById("quest");
+    const questStepEl = document.getElementById("quest-step");
+    const quest = {
+      // hunt → carry → deliver → done
+      stage: "hunt",
+    };
+
+    function setQuestStep(text, done = false) {
+      questStepEl.textContent = text;
+      questEl.classList.toggle("done", done);
     }
 
-    function makeMarker(color, x, z) {
+    function makeMarker(color, x, z, inner = 0.7, outer = 0.95) {
       const ring = new THREE.Mesh(
-        new THREE.RingGeometry(0.5, 0.65, 32),
+        new THREE.RingGeometry(inner, outer, 32),
         new THREE.MeshBasicMaterial({
           color, transparent: true, opacity: 0.55, side: THREE.DoubleSide,
         })
       );
       ring.rotation.x = -Math.PI / 2;
-      ring.position.set(x, 0.04, z);
+      ring.position.set(x, 0.05, z);
       scene.add(ring);
       return ring;
     }
-    scene.updateMatrixWorld(true);
-    const doorWorld = new THREE.Vector3();
-    home18504.localToWorld(doorWorld.copy(home18504.userData.doorLocal));
-    const doorMarker = makeMarker(0xf0c674, doorWorld.x, doorWorld.z);
-    const yarnMarker = makeMarker(0xc45c26, yarnGroup.position.x, yarnGroup.position.z);
 
-    const interactives = {
-      door: {
-        open: false,
-        angle: 0,
-        targetAngle: 0,
-        getPos: () => {
-          const p = new THREE.Vector3();
-          home18504.localToWorld(p.copy(home18504.userData.doorLocal));
-          return p;
-        },
-        radius: 3.6,
-        labelClosed: "Tap E — Zoomer's front door",
-        labelOpen: "Tap E to close the door",
-      },
-      yarn: {
-        picked: false,
-        getPos: () => yarnGroup.position.clone(),
-        radius: 3.2,
-        label: "Tap E to pick up the yarn",
-      },
+    // Bunny (small vs Zoomer — neighborhood is cat-scale)
+    const bunnyFur = new THREE.MeshStandardMaterial({ color: 0xd9cfc0, roughness: 0.85 });
+    const bunnyDark = new THREE.MeshStandardMaterial({ color: 0xb5aa9a, roughness: 0.85 });
+    const bunnyPink = new THREE.MeshStandardMaterial({ color: 0xe8a0a8, roughness: 0.7 });
+    const bunny = new THREE.Group();
+    scene.add(bunny);
+    function bMesh(geo, mat, x, y, z, sx = 1, sy = 1, sz = 1) {
+      const m = new THREE.Mesh(geo, mat);
+      m.position.set(x, y, z);
+      m.scale.set(sx, sy, sz);
+      m.castShadow = true;
+      bunny.add(m);
+      return m;
+    }
+    bMesh(new THREE.SphereGeometry(0.18, 10, 10), bunnyFur, 0, 0.28, 0, 1, 0.85, 1.15);
+    bMesh(new THREE.SphereGeometry(0.12, 10, 10), bunnyFur, 0, 0.42, 0.14);
+    bMesh(new THREE.SphereGeometry(0.03, 6, 6), bunnyPink, 0, 0.42, 0.25);
+    // Ears
+    const earL = bMesh(new THREE.CapsuleGeometry(0.035, 0.16, 4, 6), bunnyFur, -0.06, 0.58, 0.12);
+    earL.rotation.z = -0.2;
+    const earR = bMesh(new THREE.CapsuleGeometry(0.035, 0.16, 4, 6), bunnyFur, 0.06, 0.58, 0.12);
+    earR.rotation.z = 0.2;
+    bMesh(new THREE.CapsuleGeometry(0.02, 0.1, 3, 5), bunnyPink, -0.06, 0.58, 0.13);
+    bMesh(new THREE.CapsuleGeometry(0.02, 0.1, 3, 5), bunnyPink, 0.06, 0.58, 0.13);
+    // Fluffy tail
+    bMesh(new THREE.SphereGeometry(0.07, 8, 8), bunnyDark, 0, 0.3, -0.2);
+    // Legs
+    bMesh(new THREE.SphereGeometry(0.06, 6, 6), bunnyDark, -0.08, 0.1, 0.08, 1, 0.7, 1.2);
+    bMesh(new THREE.SphereGeometry(0.06, 6, 6), bunnyDark, 0.08, 0.1, 0.08, 1, 0.7, 1.2);
+    bMesh(new THREE.SphereGeometry(0.07, 6, 6), bunnyDark, -0.07, 0.1, -0.1, 1, 0.7, 1.3);
+    bMesh(new THREE.SphereGeometry(0.07, 6, 6), bunnyDark, 0.07, 0.1, -0.1, 1, 0.7, 1.3);
+
+    const bunnyState = {
+      x: bulbCX,
+      z: bulbCZ + 8,
+      yaw: 0,
+      speed: 0,
+      hop: 0,
+      panic: 0,
+      waypoint: 0,
     };
+    bunny.position.set(bunnyState.x, 0, bunnyState.z);
+
+    const bunnyWaypoints = [
+      [bulbCX + 10, bulbCZ + 12],
+      [bulbCX - 8, bulbCZ + 18],
+      [bulbCX + 16, bulbCZ - 10],
+      [40, -8],
+      [10, 8],
+      [-20, -6],
+      [bulbCX - 14, bulbCZ - 16],
+      [bulbCX + 4, bulbCZ + 6],
+    ];
+
+    scene.updateMatrixWorld(true);
+    const porchWorld = new THREE.Vector3();
+    home18504.localToWorld(porchWorld.copy(home18504.userData.porchLocal));
+    const porchMarker = makeMarker(0x7ecf7a, porchWorld.x, porchWorld.z, 1.1, 1.45);
+    porchMarker.visible = false;
+    const bunnyMarker = makeMarker(0xf0c674, bunnyState.x, bunnyState.z, 0.55, 0.75);
 
     let nearest = null;
     let toastTimer = 0;
-    function showToast(msg) {
+    function showToast(msg, longer = false) {
       toastEl.textContent = msg;
       toastEl.classList.add("visible");
-      toastTimer = 2.2;
+      toastTimer = longer ? 3.2 : 2.2;
     }
 
     function tryInteract() {
       if (!nearest) return;
-      if (nearest === "door") {
-        interactives.door.open = !interactives.door.open;
-        interactives.door.targetAngle = interactives.door.open ? -1.1 : 0;
-        showToast(interactives.door.open ? "Zoomer nudged the front door open!" : "Door closed.");
+      if (nearest === "bunny" && quest.stage === "hunt") {
+        quest.stage = "carry";
+        catState.holdingBunny = true;
+        bunnyMarker.visible = false;
+        porchMarker.visible = true;
+        setQuestStep("Bring the bunny home and leave it on the porch.");
+        showToast("Gotcha! Now take the bunny to the porch.");
         return;
       }
-      if (nearest === "yarn" && !interactives.yarn.picked) {
-        interactives.yarn.picked = true;
-        catState.holdingYarn = true;
-        yarnMarker.visible = false;
-        showToast("Zoomer grabbed the yarn!");
+      if (nearest === "porch" && quest.stage === "carry") {
+        quest.stage = "done";
+        catState.holdingBunny = false;
+        // Place bunny on porch as a gift
+        home18504.localToWorld(porchWorld.copy(home18504.userData.porchLocal));
+        bunny.position.set(porchWorld.x, porchWorld.y, porchWorld.z);
+        bunny.rotation.set(0, home18504.rotation.y + Math.PI, 0);
+        bunnyState.x = bunny.position.x;
+        bunnyState.z = bunny.position.z;
+        porchMarker.visible = false;
+        setQuestStep("Gift delivered! Zoomer left a bunny on the porch.", true);
+        showToast("Quest complete — bunny gift on the porch!", true);
       }
+    }
+
+    function updateBunny(dt) {
+      if (quest.stage === "carry") {
+        const hold = new THREE.Vector3(0.15, 0.75, 0.35);
+        hold.applyAxisAngle(new THREE.Vector3(0, 1, 0), catState.yaw);
+        bunny.position.lerp(cat.position.clone().add(hold), 1 - Math.exp(-14 * dt));
+        bunny.rotation.y = catState.yaw;
+        bunnyState.hop += dt * 10;
+        bunny.position.y = 0.75 + Math.abs(Math.sin(bunnyState.hop)) * 0.04;
+        return;
+      }
+      if (quest.stage === "done") {
+        bunnyState.hop += dt * 2;
+        bunny.position.y = porchWorld.y + Math.abs(Math.sin(bunnyState.hop)) * 0.02;
+        return;
+      }
+
+      // Hunt AI: wander, flee when Zoomer gets close
+      const dx = bunny.position.x - cat.position.x;
+      const dz = bunny.position.z - cat.position.z;
+      const distCat = Math.hypot(dx, dz);
+      const flee = distCat < 10;
+
+      let tx, tz, targetSpeed;
+      if (flee) {
+        bunnyState.panic = 1.2;
+        const len = distCat || 1;
+        tx = bunny.position.x + (dx / len) * 14;
+        tz = bunny.position.z + (dz / len) * 14;
+        targetSpeed = 6.6;
+      } else {
+        bunnyState.panic = Math.max(0, bunnyState.panic - dt);
+        const wp = bunnyWaypoints[bunnyState.waypoint % bunnyWaypoints.length];
+        tx = wp[0]; tz = wp[1];
+        targetSpeed = bunnyState.panic > 0 ? 5.0 : 3.0;
+        if (Math.hypot(tx - bunny.position.x, tz - bunny.position.z) < 2.5) {
+          bunnyState.waypoint++;
+        }
+      }
+
+      const toX = tx - bunny.position.x;
+      const toZ = tz - bunny.position.z;
+      const desiredYaw = Math.atan2(toX, toZ);
+      let turn = desiredYaw - bunnyState.yaw;
+      while (turn > Math.PI) turn -= Math.PI * 2;
+      while (turn < -Math.PI) turn += Math.PI * 2;
+      bunnyState.yaw += turn * Math.min(1, 8 * dt);
+      bunny.rotation.y = bunnyState.yaw;
+      bunnyState.speed = THREE.MathUtils.damp(bunnyState.speed, targetSpeed, 6, dt);
+      bunny.position.x += Math.sin(bunnyState.yaw) * bunnyState.speed * dt;
+      bunny.position.z += Math.cos(bunnyState.yaw) * bunnyState.speed * dt;
+      // Soft bounds
+      bunny.position.x = THREE.MathUtils.clamp(bunny.position.x, -110, 130);
+      bunny.position.z = THREE.MathUtils.clamp(bunny.position.z, -70, 70);
+
+      bunnyState.hop += dt * (8 + bunnyState.speed);
+      bunny.position.y = Math.abs(Math.sin(bunnyState.hop)) * 0.18;
+      bunnyMarker.position.x = bunny.position.x;
+      bunnyMarker.position.z = bunny.position.z;
     }
 
     // ——— Input ———
@@ -923,8 +1106,8 @@
 
     // ——— Camera ———
     let camYaw = 0;
-    const camDist = 7.5;
-    const camHeight = 4.2;
+    const camDist = 11;
+    const camHeight = 5.5;
     const camLook = new THREE.Vector3();
     const camPos = new THREE.Vector3();
 
@@ -1017,19 +1200,20 @@
       }
     }
 
-    // Soft playable bounds around the cul-de-sac block
-    const BOUNDS = { minX: -55, maxX: 70, minZ: -40, maxZ: 45 };
+    const BOUNDS = { minX: -115, maxX: 140, minZ: -75, maxZ: 80 };
     function clampCat() {
       cat.position.x = THREE.MathUtils.clamp(cat.position.x, BOUNDS.minX, BOUNDS.maxX);
       cat.position.z = THREE.MathUtils.clamp(cat.position.z, BOUNDS.minZ, BOUNDS.maxZ);
     }
 
-    // Soft collide with house footprints (AABB in XZ)
     const houseBlocks = [];
     scene.traverse((obj) => {
       if (obj.isGroup && obj.userData && (obj.userData.label || obj.userData.home)) {
-        // Approximate local footprint
-        houseBlocks.push({ group: obj, hw: 6.5, hd: 7.5 });
+        houseBlocks.push({
+          group: obj,
+          hw: obj.userData.hw || 14,
+          hd: obj.userData.hd || 14,
+        });
       }
     });
 
@@ -1137,29 +1321,11 @@
 
       clampCat();
       resolveHouseCollisions();
-
-      // Door swing on home
-      interactives.door.angle = THREE.MathUtils.damp(
-        interactives.door.angle, interactives.door.targetAngle, 6, dt
-      );
-      if (home18504.userData.door) {
-        home18504.userData.door.rotation.y = interactives.door.angle;
-      }
-
-      if (catState.holdingYarn) {
-        const hold = new THREE.Vector3(0.35, 0.55, 0.15);
-        hold.applyAxisAngle(new THREE.Vector3(0, 1, 0), catState.yaw);
-        yarnGroup.position.lerp(cat.position.clone().add(hold), 1 - Math.pow(0.0001, dt));
-        yarnGroup.position.y = 0.55 + Math.sin(markerPulse * 4) * 0.04;
-        yarnGroup.rotation.y += dt * 2;
-      } else {
-        yarnGroup.position.y = 0.22 + Math.sin(markerPulse * 3) * 0.03;
-        yarnGroup.rotation.y += dt * 0.8;
-      }
+      updateBunny(dt);
 
       const pulse = 0.4 + Math.sin(markerPulse * 3) * 0.2;
-      doorMarker.material.opacity = pulse;
-      if (yarnMarker.visible) yarnMarker.material.opacity = pulse;
+      if (bunnyMarker.visible) bunnyMarker.material.opacity = pulse;
+      if (porchMarker.visible) porchMarker.material.opacity = pulse;
 
       nearest = null;
       let bestDist = Infinity;
@@ -1167,28 +1333,35 @@
       function horizDist(pos) {
         return catXZ.distanceTo(new THREE.Vector2(pos.x, pos.z));
       }
-      const dDoor = horizDist(interactives.door.getPos());
-      if (dDoor < interactives.door.radius && dDoor < bestDist) {
-        nearest = "door"; bestDist = dDoor;
-      }
-      if (!interactives.yarn.picked) {
-        const dYarn = horizDist(interactives.yarn.getPos());
-        if (dYarn < interactives.yarn.radius && dYarn < bestDist) {
-          nearest = "yarn"; bestDist = dYarn;
+
+      if (quest.stage === "hunt") {
+        const dBunny = horizDist(bunny.position);
+        // Must get close — bunny flees inside ~10m, catch range is tighter
+        if (dBunny < 2.4 && dBunny < bestDist) {
+          nearest = "bunny";
+          bestDist = dBunny;
+        }
+      } else if (quest.stage === "carry") {
+        home18504.localToWorld(porchWorld.copy(home18504.userData.porchLocal));
+        porchMarker.position.x = porchWorld.x;
+        porchMarker.position.z = porchWorld.z;
+        const dPorch = horizDist(porchWorld);
+        if (dPorch < 3.5) {
+          nearest = "porch";
+          bestDist = dPorch;
         }
       }
-      if (nearest === "door") {
-        promptEl.textContent = interactives.door.open
-          ? interactives.door.labelOpen
-          : interactives.door.labelClosed;
+
+      if (nearest === "bunny") {
+        promptEl.textContent = "Tap E to catch the bunny!";
         promptEl.classList.add("visible");
-      } else if (nearest === "yarn") {
-        promptEl.textContent = interactives.yarn.label;
+      } else if (nearest === "porch") {
+        promptEl.textContent = "Tap E to leave the bunny on the porch";
         promptEl.classList.add("visible");
       } else {
         promptEl.classList.remove("visible");
       }
-      // Light up the E button when something is in range (mobile clarity)
+
       if (nearest) btnInteract.classList.add("ready");
       else btnInteract.classList.remove("ready");
 
