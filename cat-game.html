@@ -567,19 +567,19 @@
     addMesh(head, new THREE.ConeGeometry(0.05, 0.11, 4), earInner, -0.12, 0.22, 0.0);
     addMesh(head, new THREE.ConeGeometry(0.05, 0.11, 4), earInner, 0.12, 0.22, 0.0);
 
-    // Amber eyes + vertical pupils
+    // Amber eyes + vertical pupils (Zoomer’s signature look)
     function makeEye(x) {
       const eye = new THREE.Group();
-      eye.position.set(x, 0.06, 0.16);
+      eye.position.set(x, 0.08, 0.15);
       head.add(eye);
-      addMesh(eye, new THREE.SphereGeometry(0.055, 12, 12), eyeAmber, 0, 0, 0);
+      addMesh(eye, new THREE.SphereGeometry(0.042, 12, 12), eyeAmber, 0, 0, 0, 1, 1.05, 0.85);
       const pupil = addMesh(
         eye,
-        new THREE.CapsuleGeometry(0.012, 0.04, 4, 8),
+        new THREE.CapsuleGeometry(0.008, 0.032, 4, 8),
         eyePupil,
         0,
         0,
-        0.045
+        0.038
       );
       pupil.rotation.z = Math.PI / 2;
       return eye;
@@ -651,26 +651,28 @@
       makeLeg(0.14, -0.3, false),  // BR
     ];
 
-    // Segmented tail with faint darker “ghost” rings
+    // Segmented tail extending back with a soft side curl (matches reference)
     const tailRoot = new THREE.Group();
-    tailRoot.position.set(0, 0.08, -0.52);
+    tailRoot.position.set(0, 0.06, -0.5);
     torso.add(tailRoot);
     const tailSegs = [];
     let tailParent = tailRoot;
     for (let i = 0; i < 5; i++) {
       const seg = new THREE.Group();
-      seg.position.set(0, 0, i === 0 ? 0 : -0.14);
+      // Chain backward along -Z; slight lift baked into each joint
+      seg.position.set(0, i === 0 ? 0 : 0.02, i === 0 ? 0 : -0.13);
       tailParent.add(seg);
       const mat = i % 2 === 1 ? furStripe : furDark;
-      const r0 = 0.07 - i * 0.008;
-      const r1 = 0.06 - i * 0.008;
-      addMesh(seg, new THREE.CylinderGeometry(r1, r0, 0.15, 8), mat, 0, 0, -0.07, 1, 1, 1, Math.PI / 2, 0, 0);
+      const w = 0.11 - i * 0.012;
+      const h = 0.1 - i * 0.01;
+      addMesh(seg, new THREE.BoxGeometry(w, h, 0.14), mat, 0, 0, -0.07);
+      seg.rotation.x = -0.12; // keep the line of the tail mostly horizontal
       tailSegs.push(seg);
       tailParent = seg;
     }
-    // Resting curl a bit upward/to the side like the photo
-    tailRoot.rotation.x = 0.4;
-    tailRoot.rotation.z = 0.15;
+    tailRoot.rotation.x = -0.15;
+    tailRoot.rotation.y = 0.35;
+    tailRoot.rotation.z = 0.05;
 
     // Cat movement + animation state
     const catState = {
@@ -709,17 +711,18 @@
         torso.position.y = THREE.MathUtils.damp(torso.position.y, 0.38, 8, dt);
         torso.rotation.x = THREE.MathUtils.damp(torso.rotation.x, 0, 8, dt);
         head.rotation.x = THREE.MathUtils.damp(head.rotation.x, 0, 8, dt);
-        const sway = Math.sin(catState.animTime * 1.6) * 0.12;
-        tailRoot.rotation.z = THREE.MathUtils.damp(tailRoot.rotation.z, 0.15 + sway, 4, dt);
-        tailRoot.rotation.x = THREE.MathUtils.damp(tailRoot.rotation.x, 0.4, 4, dt);
+        const sway = Math.sin(catState.animTime * 1.6) * 0.1;
+        tailRoot.rotation.z = THREE.MathUtils.damp(tailRoot.rotation.z, 0.05 + sway * 0.3, 4, dt);
+        tailRoot.rotation.x = THREE.MathUtils.damp(tailRoot.rotation.x, -0.15, 4, dt);
+        tailRoot.rotation.y = THREE.MathUtils.damp(tailRoot.rotation.y, 0.35 + sway, 4, dt);
         for (let i = 0; i < tailSegs.length; i++) {
           tailSegs[i].rotation.y = THREE.MathUtils.damp(
             tailSegs[i].rotation.y,
-            Math.sin(catState.animTime * 1.6 - i * 0.4) * 0.08,
+            Math.sin(catState.animTime * 1.6 - i * 0.4) * 0.1,
             4,
             dt
           );
-          tailSegs[i].rotation.x = THREE.MathUtils.damp(tailSegs[i].rotation.x, 0.05, 4, dt);
+          tailSegs[i].rotation.x = THREE.MathUtils.damp(tailSegs[i].rotation.x, -0.12, 4, dt);
         }
         return;
       }
@@ -746,10 +749,11 @@
         torso.position.y = 0.38 + Math.abs(Math.sin(t)) * 0.07;
         torso.rotation.x = Math.sin(t) * 0.12;
         head.rotation.x = -Math.sin(t) * 0.08;
-        tailRoot.rotation.x = 0.55 + Math.sin(t) * 0.25;
-        tailRoot.rotation.z = 0.05;
+        tailRoot.rotation.x = -0.05 + Math.sin(t) * 0.2;
+        tailRoot.rotation.y = Math.sin(t * 0.5) * 0.15;
+        tailRoot.rotation.z = 0.02;
         for (let i = 0; i < tailSegs.length; i++) {
-          tailSegs[i].rotation.x = Math.sin(t - i * 0.35) * 0.2;
+          tailSegs[i].rotation.x = -0.08 + Math.sin(t - i * 0.35) * 0.15;
           tailSegs[i].rotation.y = 0;
         }
       } else {
@@ -768,11 +772,12 @@
         torso.position.y = 0.38 + Math.abs(Math.sin(t * 2)) * 0.025;
         torso.rotation.x = Math.sin(t * 2) * 0.03;
         head.rotation.x = -Math.sin(t * 2) * 0.04;
-        tailRoot.rotation.x = 0.35 + Math.sin(t) * 0.1;
-        tailRoot.rotation.z = 0.12 + Math.sin(t * 0.5) * 0.15;
+        tailRoot.rotation.x = -0.12 + Math.sin(t) * 0.08;
+        tailRoot.rotation.y = 0.25 + Math.sin(t * 0.5) * 0.2;
+        tailRoot.rotation.z = 0.04;
         for (let i = 0; i < tailSegs.length; i++) {
           tailSegs[i].rotation.y = Math.sin(t * 0.5 - i * 0.35) * 0.12;
-          tailSegs[i].rotation.x = 0.04;
+          tailSegs[i].rotation.x = -0.1;
         }
       }
     }
