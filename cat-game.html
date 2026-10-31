@@ -511,7 +511,7 @@
     // ——— Zoomer ———
     const cat = new THREE.Group();
     scene.add(cat);
-    // Spawn in front yard of 18504
+    // Spawn in front yard of 18504, facing the street (+Z = south)
     cat.position.set(8, 0, -8);
 
     const fur = new THREE.MeshStandardMaterial({ color: 0x3a3a3e, roughness: 0.72, metalness: 0.04 });
@@ -934,13 +934,18 @@
       return d;
     }
 
+    const _camForward = new THREE.Vector3();
+    const _camRight = new THREE.Vector3();
+
     function updateCamera(dt) {
-      // Lag yaw a bit for the same smooth feel, then sit behind Zoomer
+      // Smooth yaw follow — Zoomer’s model faces +Z, so behind = opposite that
       camYaw += shortestAngle(camYaw, catState.yaw) * (1 - Math.exp(-2.0 * dt));
+      const faceX = Math.sin(camYaw);
+      const faceZ = Math.cos(camYaw);
       const desired = new THREE.Vector3(
-        cat.position.x - Math.sin(camYaw) * camDist,
+        cat.position.x - faceX * camDist,
         cat.position.y + camHeight,
-        cat.position.z - Math.cos(camYaw) * camDist
+        cat.position.z - faceZ * camDist
       );
       camPos.lerp(desired, 1 - Math.exp(-7 * dt));
       camera.position.copy(camPos);
@@ -1062,12 +1067,16 @@
       const inputLen = Math.hypot(ix, iz);
       if (inputLen > 1) { ix /= inputLen; iz /= inputLen; }
 
-      const sinY = Math.sin(camYaw);
-      const cosY = Math.cos(camYaw);
-      const fwdX = -sinY, fwdZ = -cosY;
-      const rightX = cosY, rightZ = -sinY;
-      const dirX = fwdX * -iz + rightX * ix;
-      const dirZ = fwdZ * -iz + rightZ * ix;
+      // Stick directions from the actual camera view (fixes 180° mismatch)
+      camera.getWorldDirection(_camForward);
+      _camForward.y = 0;
+      if (_camForward.lengthSq() < 1e-6) _camForward.set(0, 0, 1);
+      else _camForward.normalize();
+      // right = up × forward (screen-right matches cat-right in chase cam)
+      _camRight.crossVectors(_up, _camForward).normalize();
+      // iz < 0 (stick up / W) → into the scene along camera look
+      const dirX = _camForward.x * -iz + _camRight.x * ix;
+      const dirZ = _camForward.z * -iz + _camRight.z * ix;
       const wishLen = Math.hypot(dirX, dirZ);
       const moving = wishLen > 0.001 && inputLen > 0.02;
       // Phones: any real stick tilt = run (Zoomer zooms). Desktop keeps Shift / hard push.
@@ -1194,11 +1203,12 @@
     }
 
     camPos.set(
-      cat.position.x + Math.sin(camYaw) * camDist,
+      cat.position.x - Math.sin(camYaw) * camDist,
       camHeight,
-      cat.position.z + Math.cos(camYaw) * camDist
+      cat.position.z - Math.cos(camYaw) * camDist
     );
     camera.position.copy(camPos);
+    camera.lookAt(cat.position.x, cat.position.y + 0.75, cat.position.z);
 
     window.addEventListener("resize", () => {
       camera.aspect = window.innerWidth / window.innerHeight;
