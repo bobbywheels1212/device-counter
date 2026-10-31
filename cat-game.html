@@ -614,7 +614,7 @@
     tailRoot.rotation.set(-0.15, 0.35, 0.05);
 
     const catState = {
-      yaw: Math.PI, // face south toward street initially
+      yaw: 0, // +Z = south, toward W 153rd Terrace
       walkSpeed: 3.4,
       runSpeed: 7.2,
       speed: 3.4,
@@ -922,7 +922,7 @@
     stickZone.addEventListener("lostpointercapture", () => { if (stick.active) resetStick(); });
 
     // ——— Camera ———
-    let camYaw = Math.PI;
+    let camYaw = 0;
     const camDist = 7.5;
     const camHeight = 4.2;
     const camLook = new THREE.Vector3();
@@ -1072,8 +1072,8 @@
       _camForward.y = 0;
       if (_camForward.lengthSq() < 1e-6) _camForward.set(0, 0, 1);
       else _camForward.normalize();
-      // right = up × forward (screen-right matches cat-right in chase cam)
-      _camRight.crossVectors(_up, _camForward).normalize();
+      // Strafe: forward × up so stick-right matches screen-right in chase cam
+      _camRight.crossVectors(_camForward, _up).normalize();
       // iz < 0 (stick up / W) → into the scene along camera look
       const dirX = _camForward.x * -iz + _camRight.x * ix;
       const dirZ = _camForward.z * -iz + _camRight.z * ix;
