@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <meta name="theme-color" content="#2a1f18" />
+  <meta name="theme-color" content="#1e3a28" />
   <meta name="apple-mobile-web-app-title" content="Zoomer Simulator" />
   <title>Zoomer Simulator</title>
   <style>
@@ -13,56 +13,36 @@
       --accent: #c45c26;
       --panel: rgba(26, 20, 16, 0.72);
     }
-
     * { box-sizing: border-box; margin: 0; padding: 0; }
-
     html, body {
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-      background: #1a1410;
+      width: 100%; height: 100%; overflow: hidden;
+      background: #87b5d9;
       font-family: "Trebuchet MS", "Segoe UI", sans-serif;
       color: var(--cream);
       touch-action: none;
       user-select: none;
       -webkit-user-select: none;
     }
-
-    #game {
-      position: fixed;
-      inset: 0;
-      display: block;
-    }
-
-    #hud {
-      position: fixed;
-      inset: 0;
-      pointer-events: none;
-      z-index: 10;
-    }
-
+    #game { position: fixed; inset: 0; display: block; }
+    #hud { position: fixed; inset: 0; pointer-events: none; z-index: 10; }
     #title {
       position: absolute;
       top: max(12px, env(safe-area-inset-top));
-      left: 16px;
-      right: 16px;
+      left: 16px; right: 16px;
     }
-
     #title h1 {
       font-size: clamp(1.1rem, 3vw, 1.6rem);
       font-weight: 700;
       letter-spacing: 0.04em;
       text-shadow: 0 2px 12px rgba(0, 0, 0, 0.55);
     }
-
     #title p {
       margin-top: 4px;
       font-size: 0.85rem;
-      opacity: 0.85;
-      max-width: 36ch;
+      opacity: 0.9;
+      max-width: 42ch;
       text-shadow: 0 1px 8px rgba(0, 0, 0, 0.5);
     }
-
     #prompt {
       position: absolute;
       bottom: max(160px, calc(env(safe-area-inset-bottom) + 190px));
@@ -78,13 +58,10 @@
       white-space: nowrap;
       backdrop-filter: blur(8px);
     }
-
     #prompt.visible { opacity: 1; }
-
     #toast {
       position: absolute;
-      top: 50%;
-      left: 50%;
+      top: 50%; left: 50%;
       transform: translate(-50%, -50%);
       background: var(--panel);
       border: 1px solid rgba(243, 230, 212, 0.3);
@@ -97,33 +74,20 @@
       text-align: center;
       backdrop-filter: blur(8px);
     }
-
     #toast.visible { opacity: 1; }
-
     #mobile-controls {
-      position: absolute;
-      inset: 0;
-      pointer-events: none;
-      display: none;
+      position: absolute; inset: 0;
+      pointer-events: none; display: none;
     }
-
     body.is-touch #mobile-controls { display: block; }
-
-    /* Whole left side is a move pad; stick floats under your thumb */
     .stick-zone {
       position: absolute;
-      left: 0;
-      top: 20%;
-      bottom: 0;
-      width: 55%;
-      pointer-events: auto;
-      touch-action: none;
+      left: 0; top: 20%; bottom: 0; width: 55%;
+      pointer-events: auto; touch-action: none;
     }
-
     .stick-base {
       position: absolute;
-      width: 128px;
-      height: 128px;
+      width: 128px; height: 128px;
       border-radius: 50%;
       background: rgba(26, 20, 16, 0.4);
       border: 2px solid rgba(243, 230, 212, 0.4);
@@ -133,22 +97,17 @@
       transition: opacity 0.15s ease;
       pointer-events: none;
     }
-
     .stick-zone.active .stick-base { opacity: 1; }
-
     .stick-knob {
       position: absolute;
-      width: 58px;
-      height: 58px;
+      width: 58px; height: 58px;
       border-radius: 50%;
       background: rgba(243, 230, 212, 0.7);
-      left: 50%;
-      top: 50%;
+      left: 50%; top: 50%;
       transform: translate(-50%, -50%);
       box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
       pointer-events: none;
     }
-
     .action-btns {
       position: absolute;
       right: 18px;
@@ -159,10 +118,8 @@
       gap: 14px;
       pointer-events: auto;
     }
-
     .action-btn {
-      width: 78px;
-      height: 78px;
+      width: 78px; height: 78px;
       border-radius: 50%;
       border: 2px solid rgba(243, 230, 212, 0.45);
       color: var(--cream);
@@ -176,58 +133,43 @@
       touch-action: manipulation;
       line-height: 1.05;
     }
-
     #btn-jump {
       background: rgba(70, 120, 160, 0.85);
-      width: 88px;
-      height: 88px;
+      width: 88px; height: 88px;
       font-size: 1.05rem;
     }
-
-    #btn-interact {
-      background: rgba(196, 92, 38, 0.8);
-    }
-
-    .action-btn:active {
-      transform: scale(0.94);
-      filter: brightness(1.12);
-    }
-
+    #btn-interact { background: rgba(196, 92, 38, 0.8); }
+    .action-btn:active { transform: scale(0.94); filter: brightness(1.12); }
     body.is-touch #title p::after {
-      content: " Drag left to walk/run · JUMP to leap · E near rings.";
+      content: " Drag left to walk/run · JUMP · E near glowing rings.";
     }
-
     #help {
       position: absolute;
       bottom: max(12px, env(safe-area-inset-bottom));
       left: 50%;
       transform: translateX(-50%);
       font-size: 0.75rem;
-      opacity: 0.7;
+      opacity: 0.75;
       text-align: center;
       text-shadow: 0 1px 6px rgba(0, 0, 0, 0.6);
       padding: 0 12px;
     }
-
     body.is-touch #help { display: none; }
   </style>
 </head>
 <body>
   <canvas id="game"></canvas>
-
   <div id="hud">
     <div id="title">
       <h1>Zoomer Simulator</h1>
-      <p>Play as Zoomer. Walk or run around the room, then interact with the door or yarn.</p>
+      <p>Map 1 — W 153rd Terrace cul-de-sac, Olathe. Run the block as Zoomer.</p>
     </div>
     <div id="prompt" aria-live="polite"></div>
     <div id="toast" aria-live="polite"></div>
-    <div id="help">WASD / arrows walk · hold Shift or push stick hard to run · E to interact · Space jump</div>
+    <div id="help">WASD walk · Shift / hard stick run · Space jump · E interact</div>
     <div id="mobile-controls">
       <div class="stick-zone" id="stick-zone">
-        <div class="stick-base">
-          <div class="stick-knob" id="stick-knob"></div>
-        </div>
+        <div class="stick-base"><div class="stick-knob" id="stick-knob"></div></div>
       </div>
       <div class="action-btns">
         <button type="button" class="action-btn" id="btn-jump" aria-label="Jump">JUMP</button>
@@ -247,7 +189,6 @@
   <script type="module">
     import * as THREE from "three";
 
-    // ——— Setup ———
     const canvas = document.getElementById("game");
     const promptEl = document.getElementById("prompt");
     const toastEl = document.getElementById("toast");
@@ -260,301 +201,303 @@
     renderer.outputColorSpace = THREE.SRGBColorSpace;
 
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x87a0b8);
-    scene.fog = new THREE.Fog(0x87a0b8, 18, 42);
+    scene.background = new THREE.Color(0x87b5d9);
+    scene.fog = new THREE.Fog(0x9ec4e0, 55, 120);
 
     const camera = new THREE.PerspectiveCamera(
       55,
       window.innerWidth / window.innerHeight,
       0.1,
-      100
+      200
     );
 
-    // ——— Room ———
-    const ROOM = { w: 14, d: 12, h: 4.2 };
-    const wallMatTemplate = new THREE.MeshStandardMaterial({
-      color: 0xd9c3a8,
-      roughness: 0.9,
-      metalness: 0.02,
-      transparent: true,
-      opacity: 1,
-      depthWrite: true,
-    });
-    const floorMat = new THREE.MeshStandardMaterial({
-      color: 0x8b5a3c,
-      roughness: 0.85,
-      metalness: 0.05,
-    });
-    const trimMat = new THREE.MeshStandardMaterial({
-      color: 0x5c3a24,
-      roughness: 0.7,
-    });
-
-    // Walls that can fade when they sit between camera and cat
+    // ——— Occlusion (houses/walls ghost when blocking Zoomer) ———
     const occluders = [];
-    const OCCLUDE_OPACITY = 0.18;
+    const OCCLUDE_OPACITY = 0.12;
 
-    function makeOccluderMaterial(template) {
-      const mat = template.clone();
-      mat.transparent = true;
-      mat.opacity = 1;
-      mat.depthWrite = true;
-      return mat;
+    function makeOccluderMaterial(color, roughness = 0.85) {
+      return new THREE.MeshStandardMaterial({
+        color,
+        roughness,
+        metalness: 0.02,
+        transparent: true,
+        opacity: 1,
+        depthWrite: true,
+      });
     }
 
     function registerOccluder(mesh) {
-      mesh.userData.fade = 1; // 1 = solid, lower = ghosted
+      mesh.userData.fade = 1;
+      mesh.userData.isOccluder = true;
       occluders.push(mesh);
       return mesh;
     }
 
-    const floor = new THREE.Mesh(
-      new THREE.PlaneGeometry(ROOM.w, ROOM.d),
-      floorMat
-    );
-    floor.rotation.x = -Math.PI / 2;
-    floor.receiveShadow = true;
-    scene.add(floor);
+    // ——— Materials ———
+    const grassMat = new THREE.MeshStandardMaterial({ color: 0x4f8a45, roughness: 0.95 });
+    const roadMat = new THREE.MeshStandardMaterial({ color: 0x3a3a3c, roughness: 0.92 });
+    const curbMat = new THREE.MeshStandardMaterial({ color: 0xc9c5bc, roughness: 0.85 });
+    const walkMat = new THREE.MeshStandardMaterial({ color: 0xd6d2c8, roughness: 0.9 });
+    const driveMat = new THREE.MeshStandardMaterial({ color: 0xcfc9bc, roughness: 0.88 });
+    const sidingA = makeOccluderMaterial(0xd8d0c4);
+    const sidingB = makeOccluderMaterial(0xc9b8a4);
+    const sidingC = makeOccluderMaterial(0xb9c4b0);
+    const brickMat = makeOccluderMaterial(0x8a5a48, 0.8);
+    const roofMat = makeOccluderMaterial(0x3d3d42, 0.75);
+    const roofBrown = makeOccluderMaterial(0x5a4034, 0.75);
+    const garageMat = makeOccluderMaterial(0x6e6a64, 0.7);
+    const fenceMat = makeOccluderMaterial(0x6b5a45, 0.9);
+    const trunkMat = new THREE.MeshStandardMaterial({ color: 0x5a4030, roughness: 0.9 });
+    const leafMat = new THREE.MeshStandardMaterial({ color: 0x3f7a38, roughness: 0.85 });
 
-    // Floor planks (subtle stripes)
-    const plankGeo = new THREE.PlaneGeometry(ROOM.w * 0.98, 0.04);
-    const plankMat = new THREE.MeshStandardMaterial({
-      color: 0x6e452c,
-      roughness: 1,
-    });
-    for (let i = -5; i <= 5; i++) {
-      const plank = new THREE.Mesh(plankGeo, plankMat);
-      plank.rotation.x = -Math.PI / 2;
-      plank.position.set(0, 0.005, i * 1.05);
-      scene.add(plank);
+    // ——— Ground / lawns ———
+    const ground = new THREE.Mesh(new THREE.PlaneGeometry(160, 120), grassMat);
+    ground.rotation.x = -Math.PI / 2;
+    ground.receiveShadow = true;
+    scene.add(ground);
+
+    // ——— Cul-de-sac road: E–W stem + eastern bulb (rough W 153rd Terrace) ———
+    // Units ≈ meters. +X = east, -Z = north, +Z = south.
+    const ROAD_Y = 0.02;
+    const roadW = 7.2;
+    const stemLen = 78;
+    const stemCenterX = -8; // stem from ~-47 to ~31
+    const bulbR = 14;
+    const bulbCX = 38;
+    const bulbCZ = 0;
+
+    const stem = new THREE.Mesh(
+      new THREE.PlaneGeometry(stemLen, roadW),
+      roadMat
+    );
+    stem.rotation.x = -Math.PI / 2;
+    stem.position.set(stemCenterX, ROAD_Y, 0);
+    stem.receiveShadow = true;
+    scene.add(stem);
+
+    const bulb = new THREE.Mesh(new THREE.CircleGeometry(bulbR, 48), roadMat);
+    bulb.rotation.x = -Math.PI / 2;
+    bulb.position.set(bulbCX, ROAD_Y + 0.001, bulbCZ);
+    bulb.receiveShadow = true;
+    scene.add(bulb);
+
+    // Hillside St stub (T-junction from south into 153rd)
+    const hillside = new THREE.Mesh(new THREE.PlaneGeometry(roadW, 36), roadMat);
+    hillside.rotation.x = -Math.PI / 2;
+    hillside.position.set(-42, ROAD_Y, 22);
+    hillside.receiveShadow = true;
+    scene.add(hillside);
+
+    // Sidewalks along stem (both sides)
+    function sidewalk(len, x, z, rot = 0) {
+      const s = new THREE.Mesh(new THREE.PlaneGeometry(len, 1.4), walkMat);
+      s.rotation.x = -Math.PI / 2;
+      s.rotation.z = rot;
+      s.position.set(x, ROAD_Y + 0.015, z);
+      s.receiveShadow = true;
+      scene.add(s);
     }
+    sidewalk(stemLen, stemCenterX, -(roadW / 2 + 1.1));
+    sidewalk(stemLen, stemCenterX, roadW / 2 + 1.1);
+    // Bulb ring sidewalk (approx using torus flat)
+    const walkRing = new THREE.Mesh(
+      new THREE.RingGeometry(bulbR + 0.4, bulbR + 1.8, 48),
+      walkMat
+    );
+    walkRing.rotation.x = -Math.PI / 2;
+    walkRing.position.set(bulbCX, ROAD_Y + 0.016, bulbCZ);
+    walkRing.receiveShadow = true;
+    scene.add(walkRing);
 
-    function makeWall(width, height, x, z, rotY) {
-      const mesh = new THREE.Mesh(
-        new THREE.BoxGeometry(width, height, 0.25),
-        makeOccluderMaterial(wallMatTemplate)
-      );
-      mesh.position.set(x, height / 2, z);
-      mesh.rotation.y = rotY;
-      mesh.castShadow = true;
-      mesh.receiveShadow = true;
-      scene.add(mesh);
-      return registerOccluder(mesh);
+    // Curbs along stem edges
+    function curb(len, x, z) {
+      const c = new THREE.Mesh(new THREE.BoxGeometry(len, 0.12, 0.25), curbMat);
+      c.position.set(x, 0.06, z);
+      c.castShadow = true;
+      scene.add(c);
     }
+    curb(stemLen, stemCenterX, -roadW / 2);
+    curb(stemLen, stemCenterX, roadW / 2);
 
-    makeWall(ROOM.w, ROOM.h, 0, -ROOM.d / 2, 0); // back
-    makeWall(ROOM.d, ROOM.h, -ROOM.w / 2, 0, Math.PI / 2); // left
-    makeWall(ROOM.d, ROOM.h, ROOM.w / 2, 0, Math.PI / 2); // right
-
-    // Front wall with door gap: two side panels + lintel
-    const doorW = 2.2;
-    const doorH = 3.1;
-    const sideW = (ROOM.w - doorW) / 2;
-    const frontZ = ROOM.d / 2;
-
-    const leftFront = new THREE.Mesh(
-      new THREE.BoxGeometry(sideW, ROOM.h, 0.25),
-      makeOccluderMaterial(wallMatTemplate)
-    );
-    leftFront.position.set(-ROOM.w / 2 + sideW / 2, ROOM.h / 2, frontZ);
-    leftFront.castShadow = true;
-    leftFront.receiveShadow = true;
-    scene.add(leftFront);
-    registerOccluder(leftFront);
-
-    const rightFront = new THREE.Mesh(
-      new THREE.BoxGeometry(sideW, ROOM.h, 0.25),
-      makeOccluderMaterial(wallMatTemplate)
-    );
-    rightFront.position.set(ROOM.w / 2 - sideW / 2, ROOM.h / 2, frontZ);
-    rightFront.castShadow = true;
-    rightFront.receiveShadow = true;
-    scene.add(rightFront);
-    registerOccluder(rightFront);
-
-    const lintel = new THREE.Mesh(
-      new THREE.BoxGeometry(doorW, ROOM.h - doorH, 0.25),
-      makeOccluderMaterial(wallMatTemplate)
-    );
-    lintel.position.set(0, doorH + (ROOM.h - doorH) / 2, frontZ);
-    lintel.castShadow = true;
-    lintel.receiveShadow = true;
-    scene.add(lintel);
-    registerOccluder(lintel);
-
-    // Ceiling
-    const ceiling = new THREE.Mesh(
-      new THREE.PlaneGeometry(ROOM.w, ROOM.d),
-      new THREE.MeshStandardMaterial({ color: 0xf0e6d8, roughness: 0.95 })
-    );
-    ceiling.rotation.x = Math.PI / 2;
-    ceiling.position.y = ROOM.h;
-    scene.add(ceiling);
-
-    // Baseboards
-    function baseboard(len, x, z, rotY) {
-      const b = new THREE.Mesh(
-        new THREE.BoxGeometry(len, 0.18, 0.08),
-        trimMat
-      );
-      b.position.set(x, 0.09, z);
-      b.rotation.y = rotY;
-      scene.add(b);
-    }
-    baseboard(ROOM.w, 0, -ROOM.d / 2 + 0.16, 0);
-    baseboard(ROOM.d, -ROOM.w / 2 + 0.16, 0, Math.PI / 2);
-    baseboard(ROOM.d, ROOM.w / 2 - 0.16, 0, Math.PI / 2);
-
-    // Rug
-    const rug = new THREE.Mesh(
-      new THREE.PlaneGeometry(4.5, 3.2),
-      new THREE.MeshStandardMaterial({ color: 0x3d5c4a, roughness: 0.95 })
-    );
-    rug.rotation.x = -Math.PI / 2;
-    rug.position.set(-2.5, 0.02, -1.5);
-    rug.receiveShadow = true;
-    scene.add(rug);
-
-    // Simple furniture: couch + table
-    function box(w, h, d, color, x, y, z) {
-      const m = new THREE.Mesh(
-        new THREE.BoxGeometry(w, h, d),
-        new THREE.MeshStandardMaterial({ color, roughness: 0.8 })
-      );
+    // ——— Simple suburban house builder ———
+    function addBox(parent, w, h, d, mat, x, y, z, occlude = true) {
+      const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
       m.position.set(x, y, z);
       m.castShadow = true;
       m.receiveShadow = true;
-      scene.add(m);
+      parent.add(m);
+      if (occlude && mat.transparent) registerOccluder(m);
       return m;
     }
-    box(3.2, 0.7, 1.2, 0x4a6741, -3.5, 0.35, -4.2); // couch seat
-    box(3.2, 0.9, 0.25, 0x3e5636, -3.5, 1.05, -4.7); // couch back
-    box(1.2, 0.45, 0.8, 0x6b4423, 2.8, 0.225, -3.5); // table
 
-    // Window on back wall
-    const windowFrame = box(2.4, 1.8, 0.12, 0x5c3a24, 0, 2.4, -ROOM.d / 2 + 0.08);
-    const windowGlass = new THREE.Mesh(
-      new THREE.PlaneGeometry(2.0, 1.4),
-      new THREE.MeshStandardMaterial({
-        color: 0xa8d4ef,
-        emissive: 0x6ea8c8,
-        emissiveIntensity: 0.35,
-        transparent: true,
-        opacity: 0.85,
-      })
-    );
-    windowGlass.position.set(0, 2.4, -ROOM.d / 2 + 0.16);
-    scene.add(windowGlass);
-
-    // ——— Interactive door ———
-    const doorPivot = new THREE.Group();
-    doorPivot.position.set(-doorW / 2, 0, frontZ);
-    scene.add(doorPivot);
-
-    const door = new THREE.Mesh(
-      new THREE.BoxGeometry(doorW - 0.08, doorH - 0.05, 0.12),
-      makeOccluderMaterial(
-        new THREE.MeshStandardMaterial({ color: 0x7a4a2a, roughness: 0.65 })
-      )
-    );
-    door.position.set(doorW / 2, doorH / 2, 0);
-    door.castShadow = true;
-    door.receiveShadow = true;
-    doorPivot.add(door);
-    registerOccluder(door);
-
-    const knob = new THREE.Mesh(
-      new THREE.SphereGeometry(0.07, 12, 12),
-      new THREE.MeshStandardMaterial({ color: 0xd4af37, metalness: 0.7, roughness: 0.3 })
-    );
-    knob.position.set(doorW - 0.25, doorH / 2, 0.1);
-    doorPivot.add(knob);
-
-    // ——— Interactive yarn ball ———
-    const yarnGroup = new THREE.Group();
-    yarnGroup.position.set(3.2, 0.22, 1.5);
-    scene.add(yarnGroup);
-
-    const yarn = new THREE.Mesh(
-      new THREE.SphereGeometry(0.22, 16, 16),
-      new THREE.MeshStandardMaterial({ color: 0xc45c26, roughness: 0.9 })
-    );
-    yarn.castShadow = true;
-    yarnGroup.add(yarn);
-
-    // Yarn swirl lines
-    const swirlMat = new THREE.MeshStandardMaterial({ color: 0x9a3d14 });
-    for (let i = 0; i < 3; i++) {
-      const ring = new THREE.Mesh(
-        new THREE.TorusGeometry(0.16 - i * 0.03, 0.018, 8, 24),
-        swirlMat
+    function makeTree(x, z, scale = 1) {
+      const g = new THREE.Group();
+      g.position.set(x, 0, z);
+      const trunk = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.18 * scale, 0.25 * scale, 2.2 * scale, 6),
+        trunkMat
       );
-      ring.rotation.x = Math.PI / 2 + i * 0.4;
-      ring.rotation.y = i * 0.7;
-      yarnGroup.add(ring);
+      trunk.position.y = 1.1 * scale;
+      trunk.castShadow = true;
+      g.add(trunk);
+      const canopy = new THREE.Mesh(
+        new THREE.SphereGeometry(1.6 * scale, 10, 10),
+        leafMat
+      );
+      canopy.position.y = 3.0 * scale;
+      canopy.castShadow = true;
+      g.add(canopy);
+      scene.add(g);
+      return g;
     }
 
-    // Interaction marker rings on floor
-    function makeMarker(color) {
-      const ring = new THREE.Mesh(
-        new THREE.RingGeometry(0.45, 0.55, 32),
-        new THREE.MeshBasicMaterial({
-          color,
-          transparent: true,
-          opacity: 0.55,
-          side: THREE.DoubleSide,
-        })
-      );
-      ring.rotation.x = -Math.PI / 2;
-      ring.position.y = 0.03;
-      return ring;
+    function makeHouse(opts) {
+      const {
+        x, z, rotY = 0, w = 11, d = 9, stories = 2,
+        siding = sidingA, roof = roofMat, label = "", home = false,
+      } = opts;
+      const group = new THREE.Group();
+      group.position.set(x, 0, z);
+      group.rotation.y = rotY;
+      scene.add(group);
+
+      const h = stories === 2 ? 5.6 : 3.4;
+      addBox(group, w, h, d, siding, 0, h / 2, 0);
+      // Brick accent band
+      addBox(group, w + 0.05, 1.1, d + 0.05, brickMat, 0, 0.55, 0);
+      // Roof (simple gable-ish: two slabs)
+      const roofH = 1.4;
+      const r1 = addBox(group, w + 0.6, 0.25, d * 0.72, roof, 0, h + 0.5, 0.15);
+      r1.rotation.x = -0.35;
+      const r2 = addBox(group, w + 0.6, 0.25, d * 0.72, roof, 0, h + 0.5, -0.15);
+      r2.rotation.x = 0.35;
+      // Garage bump on street side (+local Z)
+      addBox(group, 5.2, 2.6, 3.2, siding, w * 0.22, 1.3, d / 2 + 1.0);
+      addBox(group, 4.4, 2.0, 0.2, garageMat, w * 0.22, 1.1, d / 2 + 2.55, false);
+      // Driveway toward street
+      const drive = new THREE.Mesh(new THREE.PlaneGeometry(4.6, 8), driveMat);
+      drive.rotation.x = -Math.PI / 2;
+      drive.position.set(w * 0.22, ROAD_Y + 0.018, d / 2 + 6);
+      group.add(drive);
+
+      if (home) {
+        // Front door (interactive)
+        const door = addBox(
+          group,
+          1.1,
+          2.2,
+          0.12,
+          makeOccluderMaterial(0x5c3a24, 0.65),
+          -1.4,
+          1.15,
+          d / 2 + 0.06
+        );
+        door.name = "homeDoor";
+        group.userData.door = door;
+        group.userData.doorLocal = new THREE.Vector3(-1.4, 0, d / 2 + 0.5);
+
+        // Address plaque vibe
+        const plaque = addBox(group, 1.4, 0.35, 0.08, makeOccluderMaterial(0x2a2a2e), -1.4, 2.5, d / 2 + 0.08, false);
+      }
+
+      if (label) group.userData.label = label;
+      group.userData.home = home;
+      // Back fence
+      addBox(group, w + 4, 1.3, 0.12, fenceMat, 0, 0.65, -d / 2 - 6);
+      return group;
     }
-    const doorMarker = makeMarker(0xf0c674);
-    doorMarker.position.set(0, 0.03, frontZ - 1.1);
-    scene.add(doorMarker);
 
-    const yarnMarker = makeMarker(0xc45c26);
-    yarnMarker.position.copy(yarnGroup.position);
-    yarnMarker.position.y = 0.03;
-    scene.add(yarnMarker);
+    // North-side houses facing south (rotY = 0 means local +Z is street)
+    // 18504 is just west of bulb entrance on north side
+    const home18504 = makeHouse({
+      x: 8, z: -16.5, w: 12, d: 10, siding: sidingA, roof: roofMat,
+      label: "18504", home: true,
+    });
+    makeHouse({ x: -6, z: -16.5, w: 11, d: 9.5, siding: sidingB, roof: roofBrown, label: "18524" });
+    makeHouse({ x: -20, z: -16.5, w: 11, d: 9, siding: sidingC, roof: roofMat, label: "18544" });
+    makeHouse({ x: -34, z: -16.5, w: 10.5, d: 9, siding: sidingA, roof: roofBrown, label: "18564" });
 
-    // ——— Zoomer (charcoal gray shorthair, amber eyes) ———
+    // South-side houses facing north (rotate 180°)
+    makeHouse({ x: -6, z: 16.5, rotY: Math.PI, w: 11, d: 9, siding: sidingB, roof: roofMat, label: "18505" });
+    makeHouse({ x: -20, z: 16.5, rotY: Math.PI, w: 11, d: 9.5, siding: sidingA, roof: roofBrown, label: "18475" });
+    makeHouse({ x: -34, z: 16.5, rotY: Math.PI, w: 10.5, d: 9, siding: sidingC, roof: roofMat, label: "18585" });
+
+    // Houses around the bulb — radial, facing center
+    const bulbHomes = [
+      { ang: -0.55, label: "18444", siding: sidingA },
+      { ang: 0.15, label: "18424", siding: sidingB },
+      { ang: 0.85, label: "18404", siding: sidingC },
+      { ang: 1.55, label: "18405", siding: sidingA },
+      { ang: 2.25, label: "18425", siding: sidingB },
+      { ang: -1.25, label: "18445", siding: sidingC },
+    ];
+    for (const bh of bulbHomes) {
+      const r = bulbR + 15;
+      const hx = bulbCX + Math.cos(bh.ang) * r;
+      const hz = bulbCZ + Math.sin(bh.ang) * r;
+      // Face toward bulb center
+      const rot = bh.ang + Math.PI;
+      makeHouse({
+        x: hx, z: hz, rotY: rot, w: 10.5, d: 9,
+        siding: bh.siding, roof: Math.random() > 0.5 ? roofMat : roofBrown,
+        label: bh.label,
+      });
+    }
+
+    // Trees — front yards + buffer north
+    const treeSpots = [
+      [8, -10], [12, -11], [4, -9.5], [-6, -10], [-20, -10.5], [-34, -10],
+      [-6, 10], [-20, 10.5], [-34, 11],
+      [8, -28], [-10, -30], [20, -26], [45, -8], [50, 8], [55, -2],
+      [30, 22], [42, 24], [-45, -8], [-48, 10], [0, -32],
+      [bulbCX + 8, bulbCZ - 20], [bulbCX - 2, bulbCZ + 22],
+    ];
+    for (const [tx, tz] of treeSpots) makeTree(tx, tz, 0.85 + Math.random() * 0.45);
+
+    // Street label markers (flat)
+    function streetLabel(text, x, z) {
+      // simple asphalt paint stripe as stand-in
+      const m = new THREE.Mesh(
+        new THREE.PlaneGeometry(6, 0.35),
+        new THREE.MeshBasicMaterial({ color: 0xf0f0f0 })
+      );
+      m.rotation.x = -Math.PI / 2;
+      m.position.set(x, ROAD_Y + 0.03, z);
+      scene.add(m);
+    }
+    streetLabel("153rd", -10, 0);
+    streetLabel("bulb", bulbCX, 0);
+
+    // ——— Lighting (outdoor daytime) ———
+    scene.add(new THREE.HemisphereLight(0xcfe8ff, 0x5a6a40, 0.7));
+    const sun = new THREE.DirectionalLight(0xfff2d6, 1.25);
+    sun.position.set(-30, 45, -20);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(2048, 2048);
+    sun.shadow.camera.near = 5;
+    sun.shadow.camera.far = 120;
+    sun.shadow.camera.left = -60;
+    sun.shadow.camera.right = 60;
+    sun.shadow.camera.top = 60;
+    sun.shadow.camera.bottom = -60;
+    scene.add(sun);
+
+    // ——— Zoomer ———
     const cat = new THREE.Group();
     scene.add(cat);
+    // Spawn in front yard of 18504
+    cat.position.set(8, 0, -8);
 
-    // Coat matched to reference photos
-    const fur = new THREE.MeshStandardMaterial({
-      color: 0x3a3a3e,
-      roughness: 0.72,
-      metalness: 0.04,
-    });
-    const furDark = new THREE.MeshStandardMaterial({
-      color: 0x2a2a2e,
-      roughness: 0.75,
-    });
-    const furStripe = new THREE.MeshStandardMaterial({
-      color: 0x232328,
-      roughness: 0.8,
-    });
-    const earInner = new THREE.MeshStandardMaterial({
-      color: 0x6a5a5c,
-      roughness: 0.85,
-    });
-    const noseMat = new THREE.MeshStandardMaterial({
-      color: 0x1c1c20,
-      roughness: 0.55,
-    });
+    const fur = new THREE.MeshStandardMaterial({ color: 0x3a3a3e, roughness: 0.72, metalness: 0.04 });
+    const furDark = new THREE.MeshStandardMaterial({ color: 0x2a2a2e, roughness: 0.75 });
+    const furStripe = new THREE.MeshStandardMaterial({ color: 0x232328, roughness: 0.8 });
+    const earInner = new THREE.MeshStandardMaterial({ color: 0x6a5a5c, roughness: 0.85 });
+    const noseMat = new THREE.MeshStandardMaterial({ color: 0x1c1c20, roughness: 0.55 });
     const eyeAmber = new THREE.MeshStandardMaterial({
-      color: 0xf0c420,
-      emissive: 0xc49210,
-      emissiveIntensity: 0.35,
-      roughness: 0.35,
+      color: 0xf0c420, emissive: 0xc49210, emissiveIntensity: 0.35, roughness: 0.35,
     });
     const eyePupil = new THREE.MeshStandardMaterial({ color: 0x0a0a0a, roughness: 0.4 });
-    const whiskerMat = new THREE.MeshStandardMaterial({
-      color: 0xe8e8e8,
-      roughness: 0.6,
-    });
+    const whiskerMat = new THREE.MeshStandardMaterial({ color: 0xe8e8e8, roughness: 0.6 });
 
     function addMesh(parent, geo, mat, x, y, z, sx = 1, sy = 1, sz = 1, rx = 0, ry = 0, rz = 0) {
       const m = new THREE.Mesh(geo, mat);
@@ -567,115 +510,64 @@
       return m;
     }
 
-    // Articulated torso (spine flex while running)
     const torso = new THREE.Group();
     torso.position.y = 0.38;
     cat.add(torso);
-
     addMesh(torso, new THREE.BoxGeometry(0.42, 0.34, 0.72), fur, 0, 0.02, -0.02);
-    addMesh(torso, new THREE.BoxGeometry(0.4, 0.32, 0.36), fur, 0, 0.04, 0.34); // chest
-    addMesh(torso, new THREE.BoxGeometry(0.36, 0.28, 0.28), furDark, 0, 0.0, -0.38); // haunches
+    addMesh(torso, new THREE.BoxGeometry(0.4, 0.32, 0.36), fur, 0, 0.04, 0.34);
+    addMesh(torso, new THREE.BoxGeometry(0.36, 0.28, 0.28), furDark, 0, 0.0, -0.38);
 
-    // Head
     const head = new THREE.Group();
     head.position.set(0, 0.22, 0.58);
     torso.add(head);
-
     addMesh(head, new THREE.BoxGeometry(0.36, 0.32, 0.34), fur, 0, 0.02, 0);
-    addMesh(head, new THREE.BoxGeometry(0.2, 0.14, 0.16), fur, 0, -0.04, 0.2); // muzzle
+    addMesh(head, new THREE.BoxGeometry(0.2, 0.14, 0.16), fur, 0, -0.04, 0.2);
     addMesh(head, new THREE.BoxGeometry(0.07, 0.045, 0.05), noseMat, 0, -0.02, 0.29);
-
-    // Pointed ears
     addMesh(head, new THREE.ConeGeometry(0.1, 0.2, 4), fur, -0.12, 0.24, -0.02, 1, 1, 0.85, 0, 0, -0.2);
     addMesh(head, new THREE.ConeGeometry(0.1, 0.2, 4), fur, 0.12, 0.24, -0.02, 1, 1, 0.85, 0, 0, 0.2);
     addMesh(head, new THREE.ConeGeometry(0.05, 0.11, 4), earInner, -0.12, 0.22, 0.0);
     addMesh(head, new THREE.ConeGeometry(0.05, 0.11, 4), earInner, 0.12, 0.22, 0.0);
 
-    // Amber eyes + vertical pupils (Zoomer’s signature look)
     function makeEye(x) {
       const eye = new THREE.Group();
       eye.position.set(x, 0.08, 0.15);
       head.add(eye);
       addMesh(eye, new THREE.SphereGeometry(0.042, 12, 12), eyeAmber, 0, 0, 0, 1, 1.05, 0.85);
-      const pupil = addMesh(
-        eye,
-        new THREE.CapsuleGeometry(0.008, 0.032, 4, 8),
-        eyePupil,
-        0,
-        0,
-        0.038
-      );
+      const pupil = addMesh(eye, new THREE.CapsuleGeometry(0.008, 0.032, 4, 8), eyePupil, 0, 0, 0.038);
       pupil.rotation.z = Math.PI / 2;
-      return eye;
     }
     makeEye(-0.09);
     makeEye(0.09);
 
-    // White whiskers
     function addWhisker(side, y, zAng) {
       const w = addMesh(
-        head,
-        new THREE.CylinderGeometry(0.004, 0.004, 0.28, 4),
-        whiskerMat,
-        side * 0.12,
-        y,
-        0.22,
-        1,
-        1,
-        1,
-        0,
-        0,
-        side * (Math.PI / 2 - 0.15) + zAng
+        head, new THREE.CylinderGeometry(0.004, 0.004, 0.28, 4), whiskerMat,
+        side * 0.12, y, 0.22, 1, 1, 1, 0, 0, side * (Math.PI / 2 - 0.15) + zAng
       );
       w.castShadow = false;
     }
-    addWhisker(-1, -0.02, -0.2);
-    addWhisker(-1, -0.05, 0.05);
-    addWhisker(-1, -0.08, 0.25);
-    addWhisker(1, -0.02, 0.2);
-    addWhisker(1, -0.05, -0.05);
-    addWhisker(1, -0.08, -0.25);
+    [-1, 1].forEach((side) => {
+      addWhisker(side, -0.02, side * -0.2);
+      addWhisker(side, -0.05, side * 0.05);
+      addWhisker(side, -0.08, side * 0.25);
+    });
 
-    // Legs as hinged pivots (shoulder/hip) for walk & run cycles
     function makeLeg(x, z, isFront) {
       const pivot = new THREE.Group();
       pivot.position.set(x, isFront ? 0.02 : -0.02, z);
       torso.add(pivot);
-      const upper = addMesh(
-        pivot,
-        new THREE.BoxGeometry(0.1, 0.22, 0.12),
-        fur,
-        0,
-        -0.12,
-        0
-      );
-      const lower = addMesh(
-        pivot,
-        new THREE.BoxGeometry(0.09, 0.2, 0.1),
-        furDark,
-        0,
-        -0.3,
-        0.01
-      );
-      const paw = addMesh(
-        pivot,
-        new THREE.BoxGeometry(0.11, 0.06, 0.14),
-        furDark,
-        0,
-        -0.42,
-        0.02
-      );
-      return { pivot, upper, lower, paw, isFront, homeX: x, homeZ: z };
+      addMesh(pivot, new THREE.BoxGeometry(0.1, 0.22, 0.12), fur, 0, -0.12, 0);
+      const lower = addMesh(pivot, new THREE.BoxGeometry(0.09, 0.2, 0.1), furDark, 0, -0.3, 0.01);
+      addMesh(pivot, new THREE.BoxGeometry(0.11, 0.06, 0.14), furDark, 0, -0.42, 0.02);
+      return { pivot, lower, isFront };
     }
-
     const legs = [
-      makeLeg(-0.14, 0.28, true),  // FL
-      makeLeg(0.14, 0.28, true),   // FR
-      makeLeg(-0.14, -0.3, false), // BL
-      makeLeg(0.14, -0.3, false),  // BR
+      makeLeg(-0.14, 0.28, true),
+      makeLeg(0.14, 0.28, true),
+      makeLeg(-0.14, -0.3, false),
+      makeLeg(0.14, -0.3, false),
     ];
 
-    // Segmented tail extending back with a soft side curl (matches reference)
     const tailRoot = new THREE.Group();
     tailRoot.position.set(0, 0.06, -0.5);
     torso.add(tailRoot);
@@ -683,27 +575,23 @@
     let tailParent = tailRoot;
     for (let i = 0; i < 5; i++) {
       const seg = new THREE.Group();
-      // Chain backward along -Z; slight lift baked into each joint
       seg.position.set(0, i === 0 ? 0 : 0.02, i === 0 ? 0 : -0.13);
       tailParent.add(seg);
       const mat = i % 2 === 1 ? furStripe : furDark;
-      const w = 0.11 - i * 0.012;
-      const h = 0.1 - i * 0.01;
-      addMesh(seg, new THREE.BoxGeometry(w, h, 0.14), mat, 0, 0, -0.07);
-      seg.rotation.x = -0.12; // keep the line of the tail mostly horizontal
+      const ww = 0.11 - i * 0.012;
+      const hh = 0.1 - i * 0.01;
+      addMesh(seg, new THREE.BoxGeometry(ww, hh, 0.14), mat, 0, 0, -0.07);
+      seg.rotation.x = -0.12;
       tailSegs.push(seg);
       tailParent = seg;
     }
-    tailRoot.rotation.x = -0.15;
-    tailRoot.rotation.y = 0.35;
-    tailRoot.rotation.z = 0.05;
+    tailRoot.rotation.set(-0.15, 0.35, 0.05);
 
-    // Cat movement + animation state
     const catState = {
-      yaw: 0,
-      walkSpeed: 3.2,
-      runSpeed: 6.4,
-      speed: 3.2,
+      yaw: Math.PI, // face south toward street initially
+      walkSpeed: 3.4,
+      runSpeed: 7.2,
+      speed: 3.4,
       accel: 16,
       friction: 18,
       turnSpeed: 11,
@@ -715,34 +603,29 @@
       jumpForce: 6.8,
       gravity: 16,
       animTime: 0,
-      gait: "idle", // idle | walk | run
+      gait: "idle",
       holdingYarn: false,
     };
+    cat.rotation.y = catState.yaw;
 
     function requestJump() {
       if (catState.onGround) catState.jumpQueued = true;
     }
 
     function updateCatAnimation(dt, speedNow, moving) {
-      // Airborne pose is handled in the jump block
       if (!catState.onGround) {
         catState.gait = "jump";
         return;
       }
-
       const runThreshold = catState.walkSpeed * 0.72;
       let gait = "idle";
-      if (moving && speedNow > 0.25) {
-        gait = speedNow > runThreshold ? "run" : "walk";
-      }
+      if (moving && speedNow > 0.25) gait = speedNow > runThreshold ? "run" : "walk";
       catState.gait = gait;
 
       if (gait === "idle") {
-        // Ease limbs back to rest + soft idle breathing / tail sway
         catState.animTime += dt;
         for (const leg of legs) {
           leg.pivot.rotation.x = THREE.MathUtils.damp(leg.pivot.rotation.x, 0, 8, dt);
-          leg.pivot.rotation.z = THREE.MathUtils.damp(leg.pivot.rotation.z, 0, 8, dt);
           leg.lower.rotation.x = THREE.MathUtils.damp(leg.lower.rotation.x, 0, 8, dt);
         }
         torso.position.y = THREE.MathUtils.damp(torso.position.y, 0.38, 8, dt);
@@ -756,8 +639,7 @@
           tailSegs[i].rotation.y = THREE.MathUtils.damp(
             tailSegs[i].rotation.y,
             Math.sin(catState.animTime * 1.6 - i * 0.4) * 0.1,
-            4,
-            dt
+            4, dt
           );
           tailSegs[i].rotation.x = THREE.MathUtils.damp(tailSegs[i].rotation.x, -0.12, 4, dt);
         }
@@ -765,13 +647,9 @@
       }
 
       const isRun = gait === "run";
-      // Phase advances with distance so feet don’t moonwalk
-      const cadence = isRun ? 14 : 9;
-      catState.animTime += dt * cadence * (0.55 + speedNow / catState.runSpeed);
-
+      catState.animTime += dt * (isRun ? 14 : 9) * (0.55 + speedNow / catState.runSpeed);
       const t = catState.animTime;
       if (isRun) {
-        // Rotary gallop / bound: fronts together-ish, rears opposite, spine flex
         const swing = Math.sin(t) * 0.7;
         const rear = Math.sin(t + Math.PI) * 0.75;
         legs[0].pivot.rotation.x = swing;
@@ -782,36 +660,31 @@
         legs[1].lower.rotation.x = Math.max(0, -Math.sin(t)) * 0.5;
         legs[2].lower.rotation.x = Math.max(0, -Math.sin(t + Math.PI)) * 0.55;
         legs[3].lower.rotation.x = Math.max(0, -Math.sin(t + Math.PI)) * 0.55;
-
         torso.position.y = 0.38 + Math.abs(Math.sin(t)) * 0.07;
         torso.rotation.x = Math.sin(t) * 0.12;
         head.rotation.x = -Math.sin(t) * 0.08;
         tailRoot.rotation.x = -0.05 + Math.sin(t) * 0.2;
         tailRoot.rotation.y = Math.sin(t * 0.5) * 0.15;
-        tailRoot.rotation.z = 0.02;
         for (let i = 0; i < tailSegs.length; i++) {
           tailSegs[i].rotation.x = -0.08 + Math.sin(t - i * 0.35) * 0.15;
           tailSegs[i].rotation.y = 0;
         }
       } else {
-        // Walk: classic diagonal gait
         const a = Math.sin(t) * 0.45;
         const b = Math.sin(t + Math.PI) * 0.45;
-        legs[0].pivot.rotation.x = a; // FL
-        legs[3].pivot.rotation.x = a; // BR
-        legs[1].pivot.rotation.x = b; // FR
-        legs[2].pivot.rotation.x = b; // BL
+        legs[0].pivot.rotation.x = a;
+        legs[3].pivot.rotation.x = a;
+        legs[1].pivot.rotation.x = b;
+        legs[2].pivot.rotation.x = b;
         legs[0].lower.rotation.x = Math.max(0, -Math.sin(t)) * 0.35;
         legs[3].lower.rotation.x = Math.max(0, -Math.sin(t)) * 0.35;
         legs[1].lower.rotation.x = Math.max(0, -Math.sin(t + Math.PI)) * 0.35;
         legs[2].lower.rotation.x = Math.max(0, -Math.sin(t + Math.PI)) * 0.35;
-
         torso.position.y = 0.38 + Math.abs(Math.sin(t * 2)) * 0.025;
         torso.rotation.x = Math.sin(t * 2) * 0.03;
         head.rotation.x = -Math.sin(t * 2) * 0.04;
         tailRoot.rotation.x = -0.12 + Math.sin(t) * 0.08;
         tailRoot.rotation.y = 0.25 + Math.sin(t * 0.5) * 0.2;
-        tailRoot.rotation.z = 0.04;
         for (let i = 0; i < tailSegs.length; i++) {
           tailSegs[i].rotation.y = Math.sin(t * 0.5 - i * 0.35) * 0.12;
           tailSegs[i].rotation.x = -0.1;
@@ -819,55 +692,66 @@
       }
     }
 
-    // Camera yaw lags behind the cat so stick directions stay stable mid-drag
-    let camYaw = 0;
+    // ——— Interactives: front door + yarn in yard ———
+    const yarnGroup = new THREE.Group();
+    yarnGroup.position.set(11, 0.22, -7);
+    scene.add(yarnGroup);
+    const yarn = new THREE.Mesh(
+      new THREE.SphereGeometry(0.22, 16, 16),
+      new THREE.MeshStandardMaterial({ color: 0xc45c26, roughness: 0.9 })
+    );
+    yarn.castShadow = true;
+    yarnGroup.add(yarn);
+    const swirlMat = new THREE.MeshStandardMaterial({ color: 0x9a3d14 });
+    for (let i = 0; i < 3; i++) {
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(0.16 - i * 0.03, 0.018, 8, 24), swirlMat);
+      ring.rotation.x = Math.PI / 2 + i * 0.4;
+      ring.rotation.y = i * 0.7;
+      yarnGroup.add(ring);
+    }
 
-    // ——— Lighting ———
-    const hemi = new THREE.HemisphereLight(0xfff2e0, 0x4a3a2a, 0.55);
-    scene.add(hemi);
+    function makeMarker(color, x, z) {
+      const ring = new THREE.Mesh(
+        new THREE.RingGeometry(0.5, 0.65, 32),
+        new THREE.MeshBasicMaterial({
+          color, transparent: true, opacity: 0.55, side: THREE.DoubleSide,
+        })
+      );
+      ring.rotation.x = -Math.PI / 2;
+      ring.position.set(x, 0.04, z);
+      scene.add(ring);
+      return ring;
+    }
+    scene.updateMatrixWorld(true);
+    const doorWorld = new THREE.Vector3();
+    home18504.localToWorld(doorWorld.copy(home18504.userData.doorLocal));
+    const doorMarker = makeMarker(0xf0c674, doorWorld.x, doorWorld.z);
+    const yarnMarker = makeMarker(0xc45c26, yarnGroup.position.x, yarnGroup.position.z);
 
-    const sun = new THREE.DirectionalLight(0xfff0d8, 1.15);
-    sun.position.set(-4, 10, -6);
-    sun.castShadow = true;
-    sun.shadow.mapSize.set(1024, 1024);
-    sun.shadow.camera.near = 1;
-    sun.shadow.camera.far = 30;
-    sun.shadow.camera.left = -10;
-    sun.shadow.camera.right = 10;
-    sun.shadow.camera.top = 10;
-    sun.shadow.camera.bottom = -10;
-    scene.add(sun);
-
-    const lamp = new THREE.PointLight(0xffcc88, 0.7, 16);
-    lamp.position.set(2.8, 2.2, -3.2);
-    scene.add(lamp);
-
-    const doorLight = new THREE.PointLight(0xffe0b0, 0.35, 8);
-    doorLight.position.set(0, 2.5, frontZ - 1);
-    scene.add(doorLight);
-
-    // ——— Interaction state ———
     const interactives = {
       door: {
         open: false,
         angle: 0,
         targetAngle: 0,
-        getPos: () => new THREE.Vector3(0, 0, frontZ - 0.5),
-        radius: 2.8,
-        labelClosed: "Press E / tap to open the door",
+        getPos: () => {
+          const p = new THREE.Vector3();
+          home18504.localToWorld(p.copy(home18504.userData.doorLocal));
+          return p;
+        },
+        radius: 3.0,
+        labelClosed: "Press E / tap — Zoomer's front door",
         labelOpen: "Press E / tap to close the door",
       },
       yarn: {
         picked: false,
         getPos: () => yarnGroup.position.clone(),
-        radius: 2.4,
+        radius: 2.5,
         label: "Press E / tap to pick up the yarn",
       },
     };
 
     let nearest = null;
     let toastTimer = 0;
-
     function showToast(msg) {
       toastEl.textContent = msg;
       toastEl.classList.add("visible");
@@ -876,14 +760,12 @@
 
     function tryInteract() {
       if (!nearest) return;
-
       if (nearest === "door") {
         interactives.door.open = !interactives.door.open;
-        interactives.door.targetAngle = interactives.door.open ? -Math.PI * 0.72 : 0;
-        showToast(interactives.door.open ? "Zoomer opened the door!" : "Zoomer closed the door.");
+        interactives.door.targetAngle = interactives.door.open ? -1.1 : 0;
+        showToast(interactives.door.open ? "Zoomer nudged the front door open!" : "Door closed.");
         return;
       }
-
       if (nearest === "yarn" && !interactives.yarn.picked) {
         interactives.yarn.picked = true;
         catState.holdingYarn = true;
@@ -909,30 +791,19 @@
         e.preventDefault();
       }
     });
-    window.addEventListener("keyup", (e) => {
-      keys[e.code] = false;
-    });
+    window.addEventListener("keyup", (e) => { keys[e.code] = false; });
 
-    // Desktop: click canvas to interact. On phones, use the E button only
-    // so walking gestures don't accidentally trigger interactions.
     canvas.addEventListener("pointerdown", (e) => {
       if (isTouchUI) return;
       if (e.target === canvas && nearest) tryInteract();
     });
-
     document.getElementById("btn-interact").addEventListener("pointerdown", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      tryInteract();
+      e.preventDefault(); e.stopPropagation(); tryInteract();
     });
-
     document.getElementById("btn-jump").addEventListener("pointerdown", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      requestJump();
+      e.preventDefault(); e.stopPropagation(); requestJump();
     });
 
-    // Floating virtual stick — appear under thumb anywhere on left pad
     const stickZone = document.getElementById("stick-zone");
     const stickBase = stickZone.querySelector(".stick-base");
     const stickKnob = document.getElementById("stick-knob");
@@ -942,11 +813,7 @@
     function placeStickBase(clientX, clientY) {
       const size = 128;
       const x = THREE.MathUtils.clamp(clientX - size / 2, 8, window.innerWidth * 0.55 - size - 8);
-      const y = THREE.MathUtils.clamp(
-        clientY - size / 2,
-        window.innerHeight * 0.2,
-        window.innerHeight - size - 8
-      );
+      const y = THREE.MathUtils.clamp(clientY - size / 2, window.innerHeight * 0.2, window.innerHeight - size - 8);
       stickBase.style.left = `${x}px`;
       stickBase.style.top = `${y}px`;
       stickBase.style.bottom = "auto";
@@ -961,14 +828,11 @@
       const clamped = Math.min(len, STICK_MAX);
       dx = (dx / len) * clamped;
       dy = (dy / len) * clamped;
-
-      // Radial falloff + deadzone for steadier slow walks
       let nx = dx / STICK_MAX;
       let ny = dy / STICK_MAX;
       const mag = Math.hypot(nx, ny);
       if (mag < STICK_DEAD) {
-        stick.x = 0;
-        stick.y = 0;
+        stick.x = 0; stick.y = 0;
       } else {
         const shaped = Math.pow((mag - STICK_DEAD) / (1 - STICK_DEAD), 1.15);
         stick.x = (nx / mag) * shaped;
@@ -978,13 +842,9 @@
     }
 
     function resetStick() {
-      stick.x = 0;
-      stick.y = 0;
-      stick.active = false;
-      stick.pointerId = null;
+      stick.x = 0; stick.y = 0; stick.active = false; stick.pointerId = null;
       stickZone.classList.remove("active");
       stickKnob.style.transform = "translate(-50%, -50%)";
-      // Park stick in a comfortable default corner between uses
       stickBase.style.left = "28px";
       stickBase.style.top = "auto";
       stickBase.style.bottom = "max(28px, env(safe-area-inset-bottom))";
@@ -997,9 +857,7 @@
       stick.pointerId = e.pointerId;
       stickZone.classList.add("active");
       placeStickBase(e.clientX, e.clientY);
-      try {
-        stickZone.setPointerCapture(e.pointerId);
-      } catch (_) {}
+      try { stickZone.setPointerCapture(e.pointerId); } catch (_) {}
       setStickFromPointer(e.clientX, e.clientY);
     });
     stickZone.addEventListener("pointermove", (e) => {
@@ -1013,13 +871,12 @@
     }
     stickZone.addEventListener("pointerup", endStick);
     stickZone.addEventListener("pointercancel", endStick);
-    stickZone.addEventListener("lostpointercapture", () => {
-      if (stick.active) resetStick();
-    });
+    stickZone.addEventListener("lostpointercapture", () => { if (stick.active) resetStick(); });
 
-    // ——— Camera follow (position tracks cat; yaw lags for stable stick mapping) ———
-    const camDist = 5.8;
-    const camHeight = 3.6;
+    // ——— Camera ———
+    let camYaw = Math.PI;
+    const camDist = 7.5;
+    const camHeight = 4.2;
     const camLook = new THREE.Vector3();
     const camPos = new THREE.Vector3();
 
@@ -1030,82 +887,111 @@
     }
 
     function updateCamera(dt) {
-      // Slow yaw follow — keeps left/right stick meaning stable while turning
-      camYaw += shortestAngle(camYaw, catState.yaw) * (1 - Math.exp(-2.2 * dt));
-
+      camYaw += shortestAngle(camYaw, catState.yaw) * (1 - Math.exp(-2.0 * dt));
       const desired = new THREE.Vector3(
         cat.position.x + Math.sin(camYaw) * camDist,
         cat.position.y + camHeight,
         cat.position.z + Math.cos(camYaw) * camDist
       );
-      camPos.lerp(desired, 1 - Math.exp(-8 * dt));
+      camPos.lerp(desired, 1 - Math.exp(-7 * dt));
       camera.position.copy(camPos);
       camLook.set(cat.position.x, cat.position.y + 0.75, cat.position.z);
       camera.lookAt(camLook);
     }
 
-    // Ghost walls/door that sit between the camera and the cat
+    // Robust occlusion: multi-ray + camera-inside / near-mesh fade
     const occludeRay = new THREE.Raycaster();
-    const occludeOrigin = new THREE.Vector3();
-    const occludeTarget = new THREE.Vector3();
-    const occludeDir = new THREE.Vector3();
+    const _box = new THREE.Box3();
+    const _origin = new THREE.Vector3();
+    const _target = new THREE.Vector3();
+    const _dir = new THREE.Vector3();
+    const _side = new THREE.Vector3();
+    const _up = new THREE.Vector3(0, 1, 0);
 
     function updateOcclusion(dt) {
-      occludeOrigin.copy(camera.position);
-      occludeTarget.set(cat.position.x, cat.position.y + 0.7, cat.position.z);
-      occludeDir.subVectors(occludeTarget, occludeOrigin);
-      const dist = occludeDir.length();
-      if (dist < 0.001) return;
-      occludeDir.multiplyScalar(1 / dist);
+      _origin.copy(camera.position);
+      _target.set(cat.position.x, cat.position.y + 0.65, cat.position.z);
+      _dir.subVectors(_target, _origin);
+      const dist = _dir.length();
+      if (dist < 0.05) return;
+      _dir.multiplyScalar(1 / dist);
+      _side.crossVectors(_dir, _up).normalize();
 
-      occludeRay.set(occludeOrigin, occludeDir);
-      occludeRay.far = dist;
-      occludeRay.near = 0.05;
-
-      const hits = occludeRay.intersectObjects(occluders, false);
       const blocking = new Set();
-      for (const hit of hits) {
-        // Only fade surfaces actually between camera and cat
-        if (hit.distance < dist - 0.05) blocking.add(hit.object);
+      const offsets = [
+        new THREE.Vector3(0, 0, 0),
+        new THREE.Vector3(0, 0.35, 0),
+        _side.clone().multiplyScalar(0.35),
+        _side.clone().multiplyScalar(-0.35),
+      ];
+
+      for (const off of offsets) {
+        const o = _origin.clone().add(off);
+        const t = _target.clone().add(off);
+        const d = t.clone().sub(o);
+        const len = d.length();
+        if (len < 0.05) continue;
+        d.multiplyScalar(1 / len);
+        occludeRay.set(o, d);
+        occludeRay.near = 0.02;
+        occludeRay.far = len;
+        const hits = occludeRay.intersectObjects(occluders, false);
+        for (const hit of hits) {
+          if (hit.distance < len - 0.02) blocking.add(hit.object);
+        }
+      }
+
+      // Also ghost meshes the camera is inside or extremely close to
+      for (const mesh of occluders) {
+        _box.setFromObject(mesh);
+        if (_box.containsPoint(_origin) || _box.distanceToPoint(_origin) < 0.85) {
+          blocking.add(mesh);
+        }
       }
 
       for (const mesh of occluders) {
         const want = blocking.has(mesh) ? OCCLUDE_OPACITY : 1;
-        mesh.userData.fade = THREE.MathUtils.damp(mesh.userData.fade, want, 10, dt);
+        // Snap faster so “see-through” is obvious on phones
+        mesh.userData.fade = THREE.MathUtils.damp(mesh.userData.fade, want, 18, dt);
         const mat = mesh.material;
+        if (Array.isArray(mat)) continue;
+        mat.transparent = true;
         mat.opacity = mesh.userData.fade;
-        mat.transparent = mat.opacity < 0.999;
-        mat.depthWrite = mat.opacity > 0.85;
-        // Soften shadow casting while ghosted so the silhouette doesn’t dominate
-        mesh.castShadow = mat.opacity > 0.6;
+        mat.depthWrite = mesh.userData.fade > 0.92;
+        mesh.renderOrder = mesh.userData.fade < 0.95 ? 2 : 0;
+        mesh.castShadow = mesh.userData.fade > 0.55;
       }
     }
 
-    // ——— Bounds ———
-    const halfW = ROOM.w / 2 - 0.55;
-    const halfD = ROOM.d / 2 - 0.55;
-
+    // Soft playable bounds around the cul-de-sac block
+    const BOUNDS = { minX: -55, maxX: 70, minZ: -40, maxZ: 45 };
     function clampCat() {
-      // Soft wall collision; allow leaving through open door
-      let x = cat.position.x;
-      let z = cat.position.z;
+      cat.position.x = THREE.MathUtils.clamp(cat.position.x, BOUNDS.minX, BOUNDS.maxX);
+      cat.position.z = THREE.MathUtils.clamp(cat.position.z, BOUNDS.minZ, BOUNDS.maxZ);
+    }
 
-      x = THREE.MathUtils.clamp(x, -halfW, halfW);
+    // Soft collide with house footprints (AABB in XZ)
+    const houseBlocks = [];
+    scene.traverse((obj) => {
+      if (obj.isGroup && obj.userData && (obj.userData.label || obj.userData.home)) {
+        // Approximate local footprint
+        houseBlocks.push({ group: obj, hw: 6.5, hd: 7.5 });
+      }
+    });
 
-      const nearDoor = Math.abs(x) < doorW / 2 - 0.15;
-      const doorOpenEnough = interactives.door.angle < -0.5;
-
-      if (z > halfD) {
-        if (nearDoor && doorOpenEnough) {
-          z = Math.min(z, halfD + 2.5);
-        } else {
-          z = halfD;
+    function resolveHouseCollisions() {
+      for (const hb of houseBlocks) {
+        const local = hb.group.worldToLocal(cat.position.clone());
+        if (Math.abs(local.x) < hb.hw && Math.abs(local.z) < hb.hd) {
+          const px = hb.hw - Math.abs(local.x);
+          const pz = hb.hd - Math.abs(local.z);
+          if (px < pz) local.x = Math.sign(local.x || 1) * hb.hw;
+          else local.z = Math.sign(local.z || 1) * hb.hd;
+          const world = hb.group.localToWorld(local);
+          cat.position.x = world.x;
+          cat.position.z = world.z;
         }
       }
-      if (z < -halfD) z = -halfD;
-
-      cat.position.x = x;
-      cat.position.z = z;
     }
 
     // ——— Loop ———
@@ -1117,46 +1003,32 @@
       const dt = Math.min(clock.getDelta(), 0.05);
       markerPulse += dt;
 
-      // Movement input (keys + stick), mapped relative to lagged camera yaw
-      let ix = 0;
-      let iz = 0;
+      let ix = 0, iz = 0;
       if (keys["KeyW"] || keys["ArrowUp"]) iz -= 1;
       if (keys["KeyS"] || keys["ArrowDown"]) iz += 1;
       if (keys["KeyA"] || keys["ArrowLeft"]) ix -= 1;
       if (keys["KeyD"] || keys["ArrowRight"]) ix += 1;
       ix += stick.x;
       iz += stick.y;
-
       const inputLen = Math.hypot(ix, iz);
-      if (inputLen > 1) {
-        ix /= inputLen;
-        iz /= inputLen;
-      }
+      if (inputLen > 1) { ix /= inputLen; iz /= inputLen; }
 
-      // Camera-relative axes from lagged camYaw (not live look) → less stick fight
       const sinY = Math.sin(camYaw);
       const cosY = Math.cos(camYaw);
-      // Camera sits at cat + (sin, cos); into-scene / stick-up = opposite of that
-      const fwdX = -sinY;
-      const fwdZ = -cosY;
-      const rightX = cosY;
-      const rightZ = -sinY;
+      const fwdX = -sinY, fwdZ = -cosY;
+      const rightX = cosY, rightZ = -sinY;
       const dirX = fwdX * -iz + rightX * ix;
       const dirZ = fwdZ * -iz + rightZ * ix;
-
       const wishLen = Math.hypot(dirX, dirZ);
-      let targetVX = 0;
-      let targetVZ = 0;
       const moving = wishLen > 0.001 && inputLen > 0.02;
-      // Stick past ~65% (or Shift) → Zoomer runs
       const wantRun = moving && (inputLen > 0.65 || keys["ShiftLeft"] || keys["ShiftRight"]);
       catState.speed = wantRun ? catState.runSpeed : catState.walkSpeed;
 
+      let targetVX = 0, targetVZ = 0;
       if (moving) {
         const scale = Math.min(inputLen, 1) * catState.speed;
         targetVX = (dirX / wishLen) * scale;
         targetVZ = (dirZ / wishLen) * scale;
-
         const desiredYaw = Math.atan2(dirX, dirZ);
         catState.yaw += shortestAngle(catState.yaw, desiredYaw) * (1 - Math.exp(-catState.turnSpeed * dt));
         cat.rotation.y = catState.yaw;
@@ -1166,19 +1038,16 @@
       const blend = 1 - Math.exp(-rate * dt);
       catState.velX += (targetVX - catState.velX) * blend;
       catState.velZ += (targetVZ - catState.velZ) * blend;
-
       cat.position.x += catState.velX * dt;
       cat.position.z += catState.velZ * dt;
 
       const speedNow = Math.hypot(catState.velX, catState.velZ);
       updateCatAnimation(dt, speedNow, moving || speedNow > 0.2);
 
-      // Jump (Space / J / on-screen JUMP)
       if ((keys["Space"] || keys["KeyJ"] || catState.jumpQueued) && catState.onGround) {
         catState.velY = catState.jumpForce;
         catState.onGround = false;
         catState.jumpQueued = false;
-        // Quick tuck so the leap reads clearly
         for (const leg of legs) {
           leg.pivot.rotation.x = -0.55;
           leg.lower.rotation.x = 0.7;
@@ -1190,7 +1059,6 @@
       catState.velY -= catState.gravity * dt;
       cat.position.y += catState.velY * dt;
       if (!catState.onGround) {
-        // Hold a tucked pose in the air
         const tuck = catState.velY > 0 ? -0.45 : -0.2;
         for (const leg of legs) {
           leg.pivot.rotation.x = THREE.MathUtils.damp(leg.pivot.rotation.x, tuck, 10, dt);
@@ -1205,17 +1073,16 @@
       }
 
       clampCat();
+      resolveHouseCollisions();
 
-      // Door animation
+      // Door swing on home
       interactives.door.angle = THREE.MathUtils.damp(
-        interactives.door.angle,
-        interactives.door.targetAngle,
-        6,
-        dt
+        interactives.door.angle, interactives.door.targetAngle, 6, dt
       );
-      doorPivot.rotation.y = interactives.door.angle;
+      if (home18504.userData.door) {
+        home18504.userData.door.rotation.y = interactives.door.angle;
+      }
 
-      // Yarn follow / bob
       if (catState.holdingYarn) {
         const hold = new THREE.Vector3(0.35, 0.55, 0.15);
         hold.applyAxisAngle(new THREE.Vector3(0, 1, 0), catState.yaw);
@@ -1227,36 +1094,26 @@
         yarnGroup.rotation.y += dt * 0.8;
       }
 
-      // Markers pulse
       const pulse = 0.4 + Math.sin(markerPulse * 3) * 0.2;
       doorMarker.material.opacity = pulse;
       if (yarnMarker.visible) yarnMarker.material.opacity = pulse;
 
-      // Nearest interactive (horizontal distance only — ignore jump height)
       nearest = null;
       let bestDist = Infinity;
       const catXZ = new THREE.Vector2(cat.position.x, cat.position.z);
-
       function horizDist(pos) {
         return catXZ.distanceTo(new THREE.Vector2(pos.x, pos.z));
       }
-
-      const doorPos = interactives.door.getPos();
-      const dDoor = horizDist(doorPos);
+      const dDoor = horizDist(interactives.door.getPos());
       if (dDoor < interactives.door.radius && dDoor < bestDist) {
-        nearest = "door";
-        bestDist = dDoor;
+        nearest = "door"; bestDist = dDoor;
       }
-
       if (!interactives.yarn.picked) {
-        const yarnPos = interactives.yarn.getPos();
-        const dYarn = horizDist(yarnPos);
+        const dYarn = horizDist(interactives.yarn.getPos());
         if (dYarn < interactives.yarn.radius && dYarn < bestDist) {
-          nearest = "yarn";
-          bestDist = dYarn;
+          nearest = "yarn"; bestDist = dYarn;
         }
       }
-
       if (nearest === "door") {
         promptEl.textContent = interactives.door.open
           ? interactives.door.labelOpen
@@ -1279,9 +1136,11 @@
       renderer.render(scene, camera);
     }
 
-    // Init camera
-    camYaw = 0;
-    camPos.set(0, camHeight, camDist);
+    camPos.set(
+      cat.position.x + Math.sin(camYaw) * camDist,
+      camHeight,
+      cat.position.z + Math.cos(camYaw) * camDist
+    );
     camera.position.copy(camPos);
 
     window.addEventListener("resize", () => {
