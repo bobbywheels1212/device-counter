@@ -935,11 +935,12 @@
     }
 
     function updateCamera(dt) {
+      // Lag yaw a bit for the same smooth feel, then sit behind Zoomer
       camYaw += shortestAngle(camYaw, catState.yaw) * (1 - Math.exp(-2.0 * dt));
       const desired = new THREE.Vector3(
-        cat.position.x + Math.sin(camYaw) * camDist,
+        cat.position.x - Math.sin(camYaw) * camDist,
         cat.position.y + camHeight,
-        cat.position.z + Math.cos(camYaw) * camDist
+        cat.position.z - Math.cos(camYaw) * camDist
       );
       camPos.lerp(desired, 1 - Math.exp(-7 * dt));
       camera.position.copy(camPos);

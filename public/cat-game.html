@@ -45,7 +45,7 @@
     }
     #prompt {
       position: absolute;
-      bottom: max(160px, calc(env(safe-area-inset-bottom) + 190px));
+      bottom: max(180px, calc(env(safe-area-inset-bottom) + 220px));
       left: 50%;
       transform: translateX(-50%);
       background: var(--panel);
@@ -823,7 +823,8 @@
       if (isTouchUI) return;
       if (e.target === canvas && nearest) tryInteract();
     });
-    document.getElementById("btn-interact").addEventListener("pointerdown", (e) => {
+    const btnInteract = document.getElementById("btn-interact");
+    btnInteract.addEventListener("pointerdown", (e) => {
       e.preventDefault(); e.stopPropagation(); tryInteract();
     });
     document.getElementById("btn-jump").addEventListener("pointerdown", (e) => {
@@ -833,7 +834,6 @@
     const stickZone = document.getElementById("stick-zone");
     const stickBase = stickZone.querySelector(".stick-base");
     const stickKnob = document.getElementById("stick-knob");
-    const btnInteract = document.getElementById("btn-interact");
     // Smaller radius = full speed with a short thumb drag (easier on phones)
     const STICK_MAX = 38;
     const STICK_DEAD = 0.05;
@@ -935,11 +935,12 @@
     }
 
     function updateCamera(dt) {
+      // Lag yaw a bit for the same smooth feel, then sit behind Zoomer
       camYaw += shortestAngle(camYaw, catState.yaw) * (1 - Math.exp(-2.0 * dt));
       const desired = new THREE.Vector3(
-        cat.position.x + Math.sin(camYaw) * camDist,
+        cat.position.x - Math.sin(camYaw) * camDist,
         cat.position.y + camHeight,
-        cat.position.z + Math.cos(camYaw) * camDist
+        cat.position.z - Math.cos(camYaw) * camDist
       );
       camPos.lerp(desired, 1 - Math.exp(-7 * dt));
       camera.position.copy(camPos);
